@@ -21,6 +21,18 @@ def get_parser():
             encoder-decoder-based ('aed') decoder.
         """
     )
+    
+    parser.add_argument(
+        "--model_type",
+        type=str.lower,
+        choices=["early_conformer","early_zipformer", "early_conformer_plus"],
+        default="early_conformer",
+        help="""
+            Required: If you use a connectionist temporal 
+            classification-based ('ctc') decoder, choose 
+            the model you want to use.
+        """
+    )
 
     parser.add_argument(
         "--bpe",

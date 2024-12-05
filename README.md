@@ -22,16 +22,16 @@ This work has been partially funded by:
 | Description          | Command        |
 | ----------------- | -------------------- |
 | Training an Attention Encoder-Decoder-based model | `train.py --decoder_mode aed` |
-| Training a CTC-based model | `train.py --decoder_mode ctc` |
+| Training a CTC-based model | `train.py --decoder_mode ctc --model_type model_name` |
 | Inference with an Attention Encoder-Decoder-based model | `inference.py --decoder_mode aed --load_model_path /path/to/model` |
-| Inference with a CTC-based model | `inference.py --decoder_mode ctc --load_model_path /path/to/model` |
+| Inference with a CTC-based model | `inference.py --decoder_mode ctc --model_type model_name --load_model_path /path/to/model` |
 
 **Advanced usage examples**
 
 | Description          | Command        |
 | ----------------- | -------------------- |
 | Training an AED-based model with 6 exits, one placed every 3 layers, for a total of 18 layers | `train.py --decoder_mode aed --n_enc_exits 6 --n_enc_layers_per_exit 3` |
-| Training a CTC-based model for 75 epochs with an initial learning rate of 1e-6. The model is initialized from a pre-trained model checkpoint found at the given path | `train.py --decoder_mode ctc --n_epoch 75 --init_lr 1e-6 --load_model_path /path/to/model` |
+| Training a CTC-based model for 75 epochs with an initial learning rate of 1e-6. The model is initialized from a pre-trained model checkpoint found at the given path | `train.py --decoder_mode ctc --model_type model_name --n_epoch 75 --init_lr 1e-6 --load_model_path /path/to/model` |
 | Inference with an AED-based architecture, based on the average of model checkpoints from epochs 95 through 100 found in the directory at the given path | `inference.py --decoder_mode aed --load_model_dir /path/to/dir --avg_model_start 95 --avg_model_end 100` |
 
 See below for additional configuration options.
@@ -50,6 +50,7 @@ See below for additional configuration options.
 | Variable          | Default value        | Description                    |
 | ----------------- | -------------------- | ------------------------------ |
 | `--decoder_mode`  | --                 | **Required**: Whether to use a connectionist temporal classification-based (`ctc`) or attention encoder-decoder-based (`aed`) decoder       |
+| `--model_type` | `early_conformer`               | Choose the model to use: `early_conformer`, `early_conformer_plus` or `early_zipformer` (Only for `ctc` decoder)    |
 | `--n_epochs` | `10000`               | Number of training epochs      |
 | `--n_threads` | `10`               | Number of threads for intraop parallelism on CPU. See PyTorch torch.set_num_threads method      |
 | `--n_workers` | `10`               | Number of GPU workers for loading data      |
@@ -59,6 +60,10 @@ See below for additional configuration options.
 | `--load_model_dir`       | `None`               | Directory containing models checkpoints for model averaging       |
 | `--avg_model_start`       | `None`               | Starting epoch for model averaging       |
 | `--avg_model_end`       | `None`               | End epoch for model averaging      |
+
+- *Note 1:* In addition to the specified number of conformers and layers per conformer, the `early_conformer_plus` model automatically includes one extra parallel downsampled layer (a conformer with a single layer) before both the first and last exits. Which adds a total of two extra layers compared to the `early_conformer` model with the same parameters.
+
+- *Note 2:* Note 2: When using the `Early_zipformer`, due to its unique architecture, the parameters must be `--n_enc_exits 19` and `--n_enc_layers_per_exit 1`. You can only change these parameters by adjusting the model's structure.
 
 **Model parameters**
 
