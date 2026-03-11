@@ -246,123 +246,127 @@ class Early_zipformer_2layer_exits(nn.Module):
         self.input_dim = d_model
         self.num_heads = n_head
         self.ffn_dim = d_feed_forward
-        self.num_layers = n_enc_layers
         self.depthwise_conv_kernel_size = depthwise_kernel_size
         self.n_enc_exits = n_enc_exits
         self.dropout = drop_prob
         self.device = device
         self.src_pad_idx = src_pad_idx
+        self.stack_layers = [2, 2, 2, 2, 2, 2]
         self.factors = [2, 4, 8, 4, 2]
-        self.stack = [2, 4, 5, 4, 2]
-        self.total_blocks = 2 + sum(self.stack)
-        self.exit_interval = 2
-        self.expected_n_enc_exits = (self.total_blocks + self.exit_interval - 1) // self.exit_interval
 
-        if self.num_layers != 1:
+        if n_enc_layers != 2:
             raise ValueError(
-                "Early_zipformer_2layer_exits expects --n_enc_layers_per_exit 1 with the current architecture."
+                "Early_zipformer_2layer_exits expects n_enc_layers=2 "
+                "(one exit every two layers)."
             )
-        if self.n_enc_exits != self.expected_n_enc_exits:
+
+        if n_enc_exits != len(self.stack_layers):
             raise ValueError(
-                f"Early_zipformer_2layer_exits expects --n_enc_exits {self.expected_n_enc_exits} for the current {self.total_blocks}-block Zipformer layout."
+                f"Early_zipformer_2layer_exits expects n_enc_exits="
+                f"{len(self.stack_layers)} for the 6-stack Zipformer-S layout."
             )
+
+        self.conv_subsample = Conv1dSubampling_Zipformer(
+            in_channels=features_length,
+            out_channels=d_model,
+        )
+
+        self.positional_encoder = PositionalEncoding(
+            d_model=d_model,
+            dropout=drop_prob,
+            max_len=max_len,
+        )
 
         self.downsampling = nn.ModuleList(
             [Downsampling(factor) for factor in self.factors]
         )
+        self.upsampling = nn.ModuleList(
+            [Upsampling(factor) for factor in self.factors]
+        )
+
+
         self.downsampling_output = Downsampling(2)
-        self.upsampling = nn.ModuleList([Upsampling(factor) for factor in self.factors])
-        self.conv_subsample = Conv1dSubampling_Zipformer(
-            in_channels=features_length, out_channels=d_model
-        )
-        self.positional_encoder = PositionalEncoding(
-            d_model=d_model, dropout=drop_prob, max_len=max_len
-        )
+
         self.linears = nn.ModuleList(
             [nn.Linear(d_model, dec_voc_size) for _ in range(self.n_enc_exits)]
         )
-        self.conformer = nn.ModuleList(
+
+        self.stacks = nn.ModuleList(
             [
                 Conformer(
                     input_dim=self.input_dim,
                     num_heads=self.num_heads,
                     ffn_dim=self.ffn_dim,
-                    num_layers=self.num_layers,
+                    num_layers=2,
                     depthwise_conv_kernel_size=self.depthwise_conv_kernel_size,
                     dropout=self.dropout,
                 )
-                for _ in range(self.total_blocks)
+                for _ in range(len(self.stack_layers))
             ]
         )
 
-    def _append_exit(self, enc, enc_out, exit_index):
+    def _to_int_length(self, x: Tensor, max_len: int) -> Tensor:
+        return torch.clamp(x, max=max_len).to(torch.int).to(self.device)
+
+    def _emit_exit(self, enc: Tensor, exit_idx: int) -> Tensor:
         out = self.downsampling_output(enc)
-        out = self.linears[exit_index](out)
+        out = self.linears[exit_idx](out)
         out = torch.nn.functional.log_softmax(out, dim=2)
-        enc_out += [out.unsqueeze(0)]
+        return out.unsqueeze(0)
 
     def forward(self, src, lengths):
-
         src = self.conv_subsample(src)
         src = self.positional_encoder(src.permute(0, 2, 1))
-        length = torch.clamp(lengths / 2, max=src.size(1)).to(torch.int).to(self.device)
+
+        base_length = self._to_int_length(
+            torch.div(lengths, 2, rounding_mode="floor"),
+            src.size(1),
+        )
 
         enc_out = []
-        base_length = length.to(self.device)
         enc = src
-        processed_blocks = 0
-        exit_index = 0
 
-        for conformer in self.conformer[:2]:
-            enc, _ = conformer(enc, base_length)
-            processed_blocks += 1
-            if processed_blocks % self.exit_interval == 0:
-                self._append_exit(enc, enc_out, exit_index)
-                exit_index += 1
+        enc, _ = self.stacks[0](enc, base_length)
+        enc_out.append(self._emit_exit(enc, 0))
 
-        for index in range(0, len(self.stack)):
-            src = enc
-            factor = self.factors[index]
-            conf_index = 2 + sum(self.stack[:index])
-            pad = enc.size(1) % factor
+        for exit_idx, (factor, down, up, block) in enumerate(
+            zip(
+                self.factors,
+                self.downsampling,
+                self.upsampling,
+                self.stacks[1:],
+            ),
+            start=1,
+        ):
+            residual = enc
 
+            pad = (factor - (enc.size(1) % factor)) % factor
             if pad != 0:
-                pad = factor - pad
-                padding = torch.zeros(enc.size(0), pad, enc.size(2), device=self.device)
-                enc = torch.cat((enc, padding), dim=1)
+                padding = enc.new_zeros(enc.size(0), pad, enc.size(2))
+                enc_in = torch.cat((enc, padding), dim=1)
+            else:
+                enc_in = enc
 
-            enc = self.downsampling[index](enc)
-            length = (
-                torch.clamp((lengths + pad) / factor, max=enc.size(1))
-                .to(torch.int)
-                .to(self.device)
+            enc_ds = down(enc_in)
+
+            ds_length = self._to_int_length(
+                torch.div(base_length + pad, factor, rounding_mode="floor"),
+                enc_ds.size(1),
             )
 
-            for i in range(conf_index, conf_index + self.stack[index]):
-                enc, _ = self.conformer[i](enc, length)
-                processed_blocks += 1
-                if processed_blocks % self.exit_interval == 0:
-                    upsampled_enc = self.upsampling[index](enc)
-                    if pad != 0:
-                        upsampled_enc = upsampled_enc[:, :-pad, :]
-                    self._append_exit(upsampled_enc, enc_out, exit_index)
-                    exit_index += 1
+            enc_ds, _ = block(enc_ds, ds_length)
 
-            enc = self.upsampling[index](enc)
+            enc_up = up(enc_ds)
 
             if pad != 0:
-                enc = enc[:, :-pad, :]
-            length = (
-                torch.clamp(base_length, max=enc.size(1)).to(torch.int).to(self.device)
-            )
+                enc_up = enc_up[:, :-pad, :]
 
-            enc = enc + src
+            enc_up = enc_up[:, : residual.size(1), :]
 
-        if processed_blocks % self.exit_interval != 0:
-            self._append_exit(enc, enc_out, exit_index)
+            enc = residual + enc_up
+            enc_out.append(self._emit_exit(enc, exit_idx))
 
-        enc_out = torch.cat(enc_out)
-
+        enc_out = torch.cat(enc_out, dim=0)
         return enc_out
 
 
