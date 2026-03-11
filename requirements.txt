@@ -1,0 +1,2 @@
+# Default profile: CPU/Mac installation
+-r requirements-cpu.txt

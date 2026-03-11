@@ -18,3 +18,5 @@ trained_model/
 # Misc.
 paper/
 runs/
+
+.venv/
