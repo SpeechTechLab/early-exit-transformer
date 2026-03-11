@@ -6,7 +6,7 @@ import torchaudio
 from torchaudio.models.decoder import ctc_decoder
 
 from data import get_infer_data_loader
-from models.model.early_exit import Early_conformer, full_conformer, Early_zipformer, Splitformer
+from models.model.early_exit import Early_conformer, full_conformer, Early_zipformer, Early_zipformer_2layer_exits, Splitformer
 from util.beam_infer import BeamInference
 from util.conf import get_args
 from util.data_loader import text_transform
@@ -23,9 +23,9 @@ def evaluate_batch_ae(args, model, batch, valid_len, split, inf, vocab):
 
     # shift [0, 28, ..., 28, 29] -> [28, ..., 28, 29]
     trg_expect = batch[1][:, 1:].to(args.device)
-    
+
     for spec_, v_l, trg_expect_ in zip(batch[0], valid_len, trg_expect):
-        
+
         if args.bpe == True:
             print(split, "\nEXPECTED:", args.sp.decode(
                 trg_expect_.squeeze(0).tolist()).lower())
@@ -70,7 +70,7 @@ def evaluate_batch_ctc(args, model, batch, valid_len, split, inf, vocab):
         i = i+1
 
         best_combined = inf.ctc_cuda_predict(enc, args.tokens)
-        
+
         for best_ in best_combined:
             if args.bpe == True:
                 print(split, "BEAM_OUT_", i, ":", apply_lex(
@@ -153,7 +153,7 @@ def main():
                                     drop_prob=args.drop_prob,
                                     depthwise_kernel_size=args.depthwise_kernel_size,
                                     device=args.device).to(args.device)
-            
+
         elif args.model_type == 'early_zipformer':
             model = Early_zipformer(src_pad_idx=args.src_pad_idx,
                                     n_enc_exits=args.n_enc_exits,
@@ -168,7 +168,22 @@ def main():
                                     drop_prob=args.drop_prob,
                                     depthwise_kernel_size=args.depthwise_kernel_size,
                                     device=args.device).to(args.device)
-            
+
+        elif args.model_type == 'early_zipformer_2layer_exits':
+            model = Early_zipformer_2layer_exits(src_pad_idx=args.src_pad_idx,
+                                    n_enc_exits=args.n_enc_exits,
+                                    d_model=args.d_model,
+                                    enc_voc_size=args.enc_voc_size,
+                                    dec_voc_size=args.dec_voc_size,
+                                    max_len=args.max_len,
+                                    d_feed_forward=args.d_feed_forward,
+                                    n_head=args.n_heads,
+                                    n_enc_layers=args.n_enc_layers_per_exit,
+                                    features_length=args.n_mels,
+                                    drop_prob=args.drop_prob,
+                                    depthwise_kernel_size=args.depthwise_kernel_size,
+                                    device=args.device).to(args.device)
+
         elif args.model_type == 'splitformer':
             model = Splitformer(src_pad_idx=args.src_pad_idx,
                                     n_enc_exits=args.n_enc_exits,
