@@ -25,7 +25,7 @@ def get_parser():
     parser.add_argument(
         "--model_type",
         type=str.lower,
-        choices=["early_conformer","early_zipformer", "splitformer"],
+        choices=["early_conformer","early_zipformer", "early_zipformer_2layer_exits", "splitformer"],
         default="early_conformer",
         help="""
             Required: If you use a connectionist temporal 
