@@ -72,13 +72,16 @@ def train(args, model, iterator, optimizer, loss_fn, ctc_loss):
             epoch_loss += loss.item()
 
             if i % 500 == 0:
-                inf = BeamInference(args)
                 print("EXPECTED:", args.sp.decode(
                     trg_expect[0].tolist()).lower())
-                best_combined = inf.ctc_cuda_predict(
-                    emission=enc[0].unsqueeze(0), tokens=args.tokens)
-                print("CTC_OUT at [", i, "]:", args.sp.decode(
-                    best_combined[0][0].tokens).lower())
+                try:
+                    inf = BeamInference(args)
+                    best_combined = inf.ctc_cuda_predict(
+                        emission=enc[0].unsqueeze(0), tokens=args.tokens)
+                    print("CTC_OUT at [", i, "]:", args.sp.decode(
+                        best_combined[0][0].tokens).lower())
+                except RuntimeError as e:
+                    print("CTC preview skipped at [", i, "]:", str(e))
 
         if args.decoder_mode == 'aed':
             print('step: ', round((i / len_iterator) * 100, 2), '% , loss_total: ',
@@ -97,7 +100,7 @@ def run(args, model, total_epoch, best_loss, data_loader, optimizer, loss_fn, ct
     nepoch = -1
 
     moddir = os.getcwd() + '/' + args.save_model_dir + '/'
-    os.makedirs(moddir, exist_ok=False)
+    os.makedirs(moddir, exist_ok=True)
 
     best_model = moddir+'{}mod{:03d}-transformer'.format('', nepoch)
     best_lr = moddir+'{}lr{:03d}-transformer'.format('', nepoch)

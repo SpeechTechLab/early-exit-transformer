@@ -15,8 +15,17 @@ def get_data_loader(args):
     # train_dataset = torch.utils.data.ConcatDataset(
     #     [train_dataset1, train_dataset2, train_dataset3])
 
-    train_dataset = torchaudio.datasets.LIBRISPEECH(
-        "", url="train-clean-100", download=False)
+    try:
+        train_dataset = torchaudio.datasets.LIBRISPEECH(
+            "", url="train-clean-100", download=False
+        )
+    except RuntimeError as e:
+        if "Dataset not found" not in str(e):
+            raise
+        print("LibriSpeech train-clean-100 not found locally. Downloading dataset...")
+        train_dataset = torchaudio.datasets.LIBRISPEECH(
+            "", url="train-clean-100", download=True
+        )
 
     collate_padding_fn = CollatePaddingFn(args=args)
     data_loader = torch.utils.data.DataLoader(train_dataset, 
@@ -37,17 +46,28 @@ def get_infer_data_loader(args, split=None, shuffle=None):
         shuffle = args.shuffle
 
     try:
-        train_dataset = torchaudio.datasets.LIBRISPEECH(
-            "", url=split, download=False)
+        try:
+            train_dataset = torchaudio.datasets.LIBRISPEECH(
+                "", url=split, download=False
+            )
+        except RuntimeError as e:
+            if "Dataset not found" not in str(e):
+                raise
+            print(f"LibriSpeech {split} not found locally. Downloading dataset...")
+            train_dataset = torchaudio.datasets.LIBRISPEECH(
+                "", url=split, download=True
+            )
 
         collate_infer_fn = CollateInferFn(args=args)
-        data_loader = torch.utils.data.DataLoader(train_dataset,
-                                                pin_memory=False,
-                                                batch_size=args.batch_size,
-                                                shuffle=shuffle,
-                                                collate_fn=collate_infer_fn,
-                                                num_workers=args.n_workers)
+        data_loader = torch.utils.data.DataLoader(
+            train_dataset,
+            pin_memory=False,
+            batch_size=args.batch_size,
+            shuffle=shuffle,
+            collate_fn=collate_infer_fn,
+            num_workers=args.n_workers,
+        )
         return data_loader
 
-    except:
+    except Exception:
         exit("Invalid data split")

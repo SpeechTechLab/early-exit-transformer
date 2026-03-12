@@ -3,7 +3,13 @@ import torch
 from dataclasses import dataclass
 from typing import List
 import torch.nn.functional as F
-from torchaudio.models.decoder import ctc_decoder, cuda_ctc_decoder
+try:
+    from torchaudio.models.decoder import ctc_decoder, cuda_ctc_decoder
+    _DECODER_IMPORT_ERROR = None
+except Exception as e:
+    ctc_decoder = None
+    cuda_ctc_decoder = None
+    _DECODER_IMPORT_ERROR = e
 
 
 class GreedyCTCDecoder(torch.nn.Module):
@@ -35,6 +41,8 @@ class BeamInference(object):
 
     def __init__(self, args):
         self.args = args
+        self.decoder = []
+        self.cuda_decoder = None
 
         # for bigger LM
         self.LM_WEIGHT = 1.0  # 3.23#1.0#3.23
@@ -48,8 +56,11 @@ class BeamInference(object):
         self.N_BEST = 1
         '''
 
+        if ctc_decoder is None or cuda_ctc_decoder is None:
+            self.greedy_decoder = GreedyCTCDecoder()
+            return
+
         if args.bpe == True:
-            self.decoder = []
             # for w_ins in [-1,-1,-1,-1,-1, -1]: #valori positivi aumentano le inserzioni
             for w_ins in [0, 0, 0, 0, 0, 0]:  # valori positivi aumentano le inserzioni
                 # for w_ins in [-0.5,0.5,0.5,0.5,0.5, 0.5]:
@@ -83,6 +94,10 @@ class BeamInference(object):
 
 
     def beam_predict(self, model, input_sequence):
+        if not hasattr(self, "beam_search_decoder"):
+            raise RuntimeError(
+                "CTC decoder is unavailable. Install flashlight-text (and optional KenLM)."
+            ) from _DECODER_IMPORT_ERROR
         emission = model.ctc_encoder(input_sequence)
         beam_search_result = self.beam_search_decoder(emission.cpu())
         beam_search_transcript = " ".join(
@@ -91,6 +106,10 @@ class BeamInference(object):
 
 
     def ctc_predict_(self, emission, index=5):
+        if len(self.decoder) == 0:
+            raise RuntimeError(
+                "CTC decoder is unavailable. Install flashlight-text (and optional KenLM)."
+            ) from _DECODER_IMPORT_ERROR
         beam_search_result = self.decoder[index](emission.cpu())
         beam_search_transcript = []
         for s_ in beam_search_result:
@@ -100,6 +119,10 @@ class BeamInference(object):
 
 
     def ctc_cuda_predict(self, emission, tokens=None):
+        if cuda_ctc_decoder is None:
+            raise RuntimeError(
+                "CUDA CTC decoder is unavailable. Install flashlight-text (and optional KenLM)."
+            ) from _DECODER_IMPORT_ERROR
         if tokens == None:
             tokens = self.args.tokens
         
@@ -113,6 +136,10 @@ class BeamInference(object):
 
 
     def ctc_predict(self, emission, index=5):
+        if len(self.decoder) == 0:
+            raise RuntimeError(
+                "CTC decoder is unavailable. Install flashlight-text (and optional KenLM)."
+            ) from _DECODER_IMPORT_ERROR
         beam_search_result = self.decoder[index](emission.cpu())
         beam_search_transcript = [
             " ".join(beam_search_result[0][0].words).strip()]
