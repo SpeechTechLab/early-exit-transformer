@@ -433,6 +433,16 @@ def get_parser():
     # Inference settings
 
     parser.add_argument(
+        "--results_file",
+        type=str,
+        default=None,
+        help="""
+            Path to a JSON file where WER results will be written after
+            inference. If not provided, results are only printed to stdout.
+        """
+    )
+
+    parser.add_argument(
         "--beam_size",
         type=int,
         default=10,

@@ -1,9 +1,15 @@
+import json
 import os
 import sys
 import re
 from torch import nn, optim
 import torchaudio
 from torchaudio.models.decoder import ctc_decoder
+
+try:
+    import jiwer
+except ImportError:
+    jiwer = None
 
 from data import get_infer_data_loader
 from models.model.early_exit import Early_conformer, full_conformer, Early_zipformer, Early_zipformer_2layer_exits, Splitformer
@@ -62,40 +68,47 @@ def evaluate_batch_ae(args, model, batch, valid_len, split, inf, vocab):
     return
 
 
-def evaluate_batch_ctc(args, model, batch, valid_len, split, inf, vocab):
+def evaluate_batch_ctc(args, model, batch, valid_len, split, inf, vocab,
+                       batch_refs=None, wer_stats=None):
     encoder = model(batch[0].to(args.device), valid_len)
     i = 0
 
     for enc in encoder:
-        i = i+1
+        i = i + 1
+        batch_hyps = []
 
         best_combined = inf.ctc_cuda_predict(enc, args.tokens)
 
         for best_ in best_combined:
             if args.bpe == True:
-                print(split, "BEAM_OUT_", i, ":", apply_lex(
-                    args.sp.decode(best_[0].tokens).lower(), vocab))
+                hyp = apply_lex(args.sp.decode(best_[0].tokens).lower(), vocab)
             else:
-                print(split, "BEAM_OUT_", i, ":",  apply_lex(
-                    re.sub(r"[#^$]+", "", best_.lower()), vocab))
+                hyp = apply_lex(re.sub(r"[#^$]+", "", best_.lower()), vocab)
+            print(split, "BEAM_OUT_", i, ":", hyp)
+            batch_hyps.append(hyp)
+
+        if wer_stats is not None and batch_refs is not None:
+            wer_stats[i]["refs"].extend(batch_refs)
+            wer_stats[i]["hyps"].extend(batch_hyps)
 
     return
 
 
-def run(args, model, data_loader, split, inf, vocab):
+def run(args, model, data_loader, split, inf, vocab, wer_stats=None):
     for batch in data_loader:
         # shift [0, 28, ..., 28, 29] -> [28, ..., 28, 29]
         trg_expect = batch[1][:, 1:].to(args.device)
         # cut [0, 28, ..., 28, 29] -> [0, 28, ..., 28]
         # trg = batch[1][:, :-1].to(args.device)
 
+        batch_refs = []
         for trg_expect_ in trg_expect:
             if args.bpe == True:
-                print(split, "EXPECTED:", args.sp.decode(
-                    trg_expect_.squeeze(0).tolist()).lower())
+                ref = args.sp.decode(trg_expect_.squeeze(0).tolist()).lower()
             else:
-                print(split, "EXPECTED:", re.sub(
-                    r"[#^$]+", "", text_transform.int_to_text(trg_expect_.squeeze(0))))
+                ref = re.sub(r"[#^$]+", "", text_transform.int_to_text(trg_expect_.squeeze(0)))
+            print(split, "EXPECTED:", ref)
+            batch_refs.append(ref)
 
         valid_len = batch[2]
 
@@ -104,7 +117,8 @@ def run(args, model, data_loader, split, inf, vocab):
                               valid_len, split, inf, vocab)
         elif args.decoder_mode == 'ctc':
             evaluate_batch_ctc(args, model, batch,
-                               valid_len, split, inf, vocab)
+                               valid_len, split, inf, vocab,
+                               batch_refs=batch_refs, wer_stats=wer_stats)
 
     return
 
@@ -237,15 +251,66 @@ def main():
     file_dict = 'librispeech.lex'
     vocab = load_dict(file_dict)
 
+    results = {}
+
     for split in ["test-clean", "test-other"]:  # "dev-clean", "dev-other":
         print(split)
+
+        wer_stats = {i: {"refs": [], "hyps": []} for i in range(1, args.n_enc_exits + 1)}
 
         # Load data split
         data_loader = get_infer_data_loader(
             args=args, split=split, shuffle=False)
 
         run(model=model, args=args, data_loader=data_loader,
-            split=split, inf=inf, vocab=vocab)
+            split=split, inf=inf, vocab=vocab, wer_stats=wer_stats)
+
+        _print_wer_table(split, wer_stats, args.n_enc_exits, results)
+
+    if results and jiwer is not None:
+        _write_results(results, args)
+
+
+def _print_wer_table(split, wer_stats, n_enc_exits, results):
+    if jiwer is None:
+        print("\n[jiwer not installed — skipping WER. Run: pip install jiwer]\n")
+        return
+
+    col_w = 12
+    header = f"{'Exit':<6}" + f"{'WER (%)':>{col_w}}" + f"{'Utterances':>{col_w}}"
+    sep = "-" * len(header)
+    print(f"\n{'=== WER: ' + split + ' ===':^{len(header)}}")
+    print(header)
+    print(sep)
+
+    split_results = {}
+    for i in range(1, n_enc_exits + 1):
+        refs = wer_stats[i]["refs"]
+        hyps = wer_stats[i]["hyps"]
+        if refs:
+            wer_val = round(jiwer.wer(refs, hyps) * 100, 2)
+            print(f"{i:<6}{wer_val:>{col_w}.2f}{len(refs):>{col_w}}")
+            split_results[f"exit_{i}"] = {"wer_pct": wer_val, "utterances": len(refs)}
+    print(sep)
+    print()
+    results[split] = split_results
+
+
+def _write_results(results, args):
+    if args.results_file:
+        out_path = args.results_file
+    else:
+        # derive a default name from the model path used
+        model_tag = (
+            os.path.basename(args.load_model_path)
+            if args.load_model_path
+            else f"{args.load_model_dir}_avg{args.avg_model_start}-{args.avg_model_end}"
+        )
+        out_path = f"wer_{model_tag}.json"
+
+    with open(out_path, "w") as f:
+        json.dump(results, f, indent=2)
+    print(f"[WER results written to {out_path}]\n")
 
 
 if __name__ == '__main__':
