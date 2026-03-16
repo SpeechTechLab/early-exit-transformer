@@ -96,7 +96,8 @@ def train(args, model, iterator, optimizer, loss_fn, ctc_loss):
 
 
 def run(args, model, total_epoch, best_loss, data_loader, optimizer, loss_fn, ctc_loss):
-    loss_prev = 9999999
+    loss_prev = best_loss
+    epochs_no_improve = 0
     nepoch = -1
 
     moddir = os.getcwd() + '/' + args.save_model_dir + '/'
@@ -120,8 +121,11 @@ def run(args, model, total_epoch, best_loss, data_loader, optimizer, loss_fn, ct
         writer.add_scalar("Total loss", loss_total, step)
         print("LOSS_TOTAL-", step, ":=", loss_total)
 
-        if loss_total < loss_prev:
+        improved = loss_total < (loss_prev - args.early_stopping_min_delta)
+
+        if improved:
             loss_prev = loss_total
+            epochs_no_improve = 0
             best_model = moddir + 'mod{:03d}-transformer'.format(step)
 
             print("saving:", best_model)
@@ -131,8 +135,26 @@ def run(args, model, total_epoch, best_loss, data_loader, optimizer, loss_fn, ct
             torch.save(optimizer.state_dict(), lrate)
 
         else:
+            epochs_no_improve += 1
             worst_model = moddir + 'mod{:03d}-transformer'.format(step)
             print("WORST: not saving:", worst_model)
+
+        # Stop once loss has plateaued for `patience` epochs.
+        if (
+            (step + 1) >= args.early_stopping_min_epochs
+            and epochs_no_improve >= args.early_stopping_patience
+        ):
+            print(
+                "EARLY STOPPING at epoch",
+                step,
+                "| best_loss:",
+                loss_prev,
+                "| patience:",
+                args.early_stopping_patience,
+                "| min_delta:",
+                args.early_stopping_min_delta,
+            )
+            break
 
 
 def main():

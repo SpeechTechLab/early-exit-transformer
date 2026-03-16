@@ -141,7 +141,37 @@ def get_parser():
         type=int,
         default=10000,
         help="""
-            Number of training epochs.
+            Maximum number of training epochs.
+            Training may stop earlier if early stopping is triggered.
+        """
+    )
+
+    parser.add_argument(
+        "--early_stopping_patience",
+        type=int,
+        default=8,
+        help="""
+            Number of consecutive epochs without sufficient loss improvement
+            before stopping training early.
+        """
+    )
+
+    parser.add_argument(
+        "--early_stopping_min_delta",
+        type=float,
+        default=1e-3,
+        help="""
+            Minimum decrease in epoch loss required to count as improvement
+            for early stopping.
+        """
+    )
+
+    parser.add_argument(
+        "--early_stopping_min_epochs",
+        type=int,
+        default=10,
+        help="""
+            Minimum number of epochs to run before early stopping can trigger.
         """
     )
 
