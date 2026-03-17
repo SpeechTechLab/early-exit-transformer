@@ -5,27 +5,33 @@ from util.data_loader import CollatePaddingFn, CollateInferFn
 
 
 def get_data_loader(args):
-
-    # train_dataset1 = torchaudio.datasets.LIBRISPEECH(
-    #     "", url="train-clean-100", download=False)
-    # train_dataset2 = torchaudio.datasets.LIBRISPEECH(
-    #     "", url="train-clean-360", download=False)
-    # train_dataset3 = torchaudio.datasets.LIBRISPEECH(
-    #     "", url="train-other-500", download=False)
-    # train_dataset = torch.utils.data.ConcatDataset(
-    #     [train_dataset1, train_dataset2, train_dataset3])
-
     try:
-        train_dataset = torchaudio.datasets.LIBRISPEECH(
+        train_dataset1 = torchaudio.datasets.LIBRISPEECH(
             "", url="train-clean-100", download=False
+        )
+        train_dataset2 = torchaudio.datasets.LIBRISPEECH(
+            "", url="train-clean-360", download=False
+        )
+        train_dataset3 = torchaudio.datasets.LIBRISPEECH(
+            "", url="train-other-500", download=False
         )
     except RuntimeError as e:
         if "Dataset not found" not in str(e):
             raise
-        print("LibriSpeech train-clean-100 not found locally. Downloading dataset...")
-        train_dataset = torchaudio.datasets.LIBRISPEECH(
+        print("LibriSpeech full training set not found locally. Downloading missing splits...")
+        train_dataset1 = torchaudio.datasets.LIBRISPEECH(
             "", url="train-clean-100", download=True
         )
+        train_dataset2 = torchaudio.datasets.LIBRISPEECH(
+            "", url="train-clean-360", download=True
+        )
+        train_dataset3 = torchaudio.datasets.LIBRISPEECH(
+            "", url="train-other-500", download=True
+        )
+
+    train_dataset = torch.utils.data.ConcatDataset(
+        [train_dataset1, train_dataset2, train_dataset3]
+    )
 
     collate_padding_fn = CollatePaddingFn(args=args)
     data_loader = torch.utils.data.DataLoader(train_dataset, 

@@ -98,13 +98,19 @@ def train(args, model, iterator, optimizer, loss_fn, ctc_loss):
 def run(args, model, total_epoch, best_loss, data_loader, optimizer, loss_fn, ctc_loss):
     loss_prev = best_loss
     epochs_no_improve = 0
-    nepoch = -1
-
+    
     moddir = os.getcwd() + '/' + args.save_model_dir + '/'
     os.makedirs(moddir, exist_ok=True)
 
-    best_model = moddir+'{}mod{:03d}-transformer'.format('', nepoch)
-    best_lr = moddir+'{}lr{:03d}-transformer'.format('', nepoch)
+    nepoch = -1
+    existing_models = [f for f in os.listdir(moddir) if f.startswith('mod') and f.endswith('-transformer')]
+    if existing_models:
+        epochs = [int(f.replace('mod', '').replace('-transformer', '')) for f in existing_models]
+        nepoch = max(epochs)
+        print(f"Found latest checkpoint at epoch {nepoch}")
+
+    best_model = moddir + f'mod{nepoch:03d}-transformer'
+    best_lr = moddir + f'lr{nepoch:03d}-transformer'
 
     if os.path.exists(best_model):
         print('loading model checkpoint:', best_model)
