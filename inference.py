@@ -262,8 +262,10 @@ def main():
         data_loader = get_infer_data_loader(
             args=args, split=split, shuffle=False)
 
-        run(model=model, args=args, data_loader=data_loader,
-            split=split, inf=inf, vocab=vocab, wer_stats=wer_stats)
+
+        with torch.no_grad():
+            run(model=model, args=args, data_loader=data_loader,
+                split=split, inf=inf, vocab=vocab, wer_stats=wer_stats)
 
         _print_wer_table(split, wer_stats, args.n_enc_exits, results)
 
