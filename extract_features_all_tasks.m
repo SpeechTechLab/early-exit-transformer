@@ -1,16 +1,14 @@
 % extract_features_all_tasks.m
 addpath("core","eval","framework","pipeline");
 
-data_dir = 'data/LibriSpeech/train-clean-100';
+data_dir = 'LibriSpeech/train-clean-100';
+% List all subdirectories (tasks) in the data_dir
 tasks = dir(data_dir);
 tasks = tasks([tasks.isdir]);
 tasks = tasks(~ismember({tasks.name}, {'.', '..'}));
 
-% Filter to only process the 'Vowels' task
-tasks = tasks(strcmp({tasks.name}, 'Vowels'));
-
 if isempty(tasks)
-    error('Task "Vowels" not found in the data directory.');
+    error('No subdirectories (tasks) found in the data directory: %s', data_dir);
 end
 
 algorithms = {'IAIF', 'QCP', 'TRLP'};
@@ -21,11 +19,11 @@ for t = 1:length(tasks)
     
     task_dir = fullfile(data_dir, task_name);
     
-    % Find all wav files recursively
-    wav_files = dir(fullfile(task_dir, '**', '*.wav'));
+    % Find all flac files recursively
+    flac_files = dir(fullfile(task_dir, '**', '*.flac'));
     
-    if isempty(wav_files)
-        fprintf('No wav files found in %s\n', task_name);
+    if isempty(flac_files)
+        fprintf('No flac files found in %s\n', task_name);
         continue;
     end
     
@@ -63,28 +61,21 @@ for t = 1:length(tasks)
         end
     end
     
-    for w = 1:length(wav_files)
-        file_path = fullfile(wav_files(w).folder, wav_files(w).name);
-        [~, file_name, ~] = fileparts(wav_files(w).name);
+    for w = 1:length(flac_files)
+        file_path = fullfile(flac_files(w).folder, flac_files(w).name);
+        [~, file_name, ~] = fileparts(flac_files(w).name);
         file_name_str = string(file_name);
         
-        % Extract speaker ID and class from filename
-        % e.g., AVPEPUDEAC0019 (Control) or AVPEPUDEAA0053 (Pathological)
-        % Sometimes pathological files are just AVPEPUDEA0059 (missing the second A)
-        match = regexp(file_name, 'AVPEPUDEA([AC]?\d{4})', 'tokens');
-        if isempty(match)
+        % Extract speaker, chapter, and utterance from LibriSpeech filename: speaker-chapter-utterance
+        parts = regexp(file_name, '^(\d+)-(\d+)-(\d+)$', 'tokens');
+        if isempty(parts)
             fprintf('Skipping file with unknown naming format: %s\n', file_name);
             continue;
         end
-        speaker_id = match{1}{1};
-        
-        % If the speaker_id starts with a digit, it means the 'A' or 'C' was missing.
-        % Based on the dataset, these are pathological (A).
-        if isstrprop(speaker_id(1), 'digit')
-            speaker_id = ['A', speaker_id];
-        end
-        
-        label = speaker_id(1); % 'A' or 'C'
+        speaker_id = string(parts{1}{1});
+        chapter_id = string(parts{1}{2});
+        utterance_id = string(parts{1}{3});
+        label = "unknown"; % LibriSpeech does not provide pathology/control labels
         
         % Check if this file has already been processed by ALL algorithms
         all_processed = true;
@@ -155,8 +146,10 @@ for t = 1:length(tasks)
                 algo = algorithms{a};
                 file_features.(algo) = struct();
                 file_features.(algo).file_name = file_name_str;
-                file_features.(algo).speaker = string(speaker_id);
-                file_features.(algo).label = string(label);
+                file_features.(algo).speaker = speaker_id;
+                file_features.(algo).chapter = chapter_id;
+                file_features.(algo).utterance = utterance_id;
+                file_features.(algo).label = label;
                 file_features.(algo).task = string(task_name);
                 
                 metrics_list = {'NAQ', 'QOQ', 'HRF', 'H1H2', 'G_RMS', 'G_ZCR', 'G_CREST', 'DG_PEAK', 'RES_RMS', 'RES_LEN_RATIO'};
