@@ -4,6 +4,11 @@ import sentencepiece as spm
 
 def get_parser():
     parser = argparse.ArgumentParser(
+            parser.add_argument(
+                "--use_precomputed_features",
+                action="store_true",
+                help="If set, loads features from precomputed feature files (e.g., CSV) instead of extracting from audio."
+            )
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
 

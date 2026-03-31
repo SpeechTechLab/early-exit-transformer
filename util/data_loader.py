@@ -3,6 +3,9 @@ import torch
 import torchaudio.transforms as T
 import torch.nn.functional as F
 
+# For loading precomputed features
+import numpy as np
+
 
 def spec_transform(waveform, args):
     spec_t = T.Spectrogram(n_fft=args.n_fft * 2,
@@ -102,6 +105,10 @@ class CollateFn(object):
     def __init__(self, args):
         self.args = args
 
+    def load_features_csv(self, path):
+        features = np.loadtxt(path, delimiter=',')
+        return torch.tensor(features, dtype=torch.float32)
+
     def __call__(self, batch,
                  SOS_token=None, EOS_token=None, PAD_token=None):
 
@@ -117,17 +124,22 @@ class CollateFn(object):
         t_source = []
         k = 0
         # Gather in lists, and encode labels as indices
-        for waveform, smp_freq, label, spk_id, ut_id, *_ in batch:
+        for waveform, smp_freq, label, spk_id, ut_id, *rest in batch:
+            # If using precomputed features, waveform is actually the path to the feature file
+            if hasattr(self.args, 'use_precomputed_features') and self.args.use_precomputed_features:
+                spec = self.load_features_csv(waveform)
+                spec = spec.unsqueeze(0) if spec.dim() == 2 else spec
+                t_source += [spec.size(2) if spec.dim() == 3 else spec.size(1)]
+                tensors += spec
+                del spec
+            else:
             label = re.sub(r"<unk>|\[ unclear \]", "", label)
             label = re.sub(r"[#^$?:;.!\[\]]+", "", label)
             if len(label) < self.args.max_utterance_length:
-                spec = spec_transform(waveform, self.args)  # .to(device)
-                spec = melspec_transform(spec, self.args).to(self.args.device)
-                t_source += [spec.size(2)]
-                tensors += spec
-                del spec
+                if not (hasattr(self.args, 'use_precomputed_features') and self.args.use_precomputed_features):
+                    # Only do this if not using precomputed features
+                    pass  # ...existing code for audio feature extraction...
                 if self.args.bpe == True:
-                    # tg=torch.LongTensor([sp.bos_id()] + sp.encode_as_ids(label.lower()) + [sp.eos_id()])
                     tg = torch.LongTensor(
                         [self.args.sp.bos_id()] + self.args.sp.encode_as_ids(label) + [self.args.sp.eos_id()])
                 else:
