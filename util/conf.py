@@ -3,15 +3,14 @@ import torch
 import sentencepiece as spm
 
 def get_parser():
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter
+    )
     parser.add_argument(
         "--manifest",
         type=str,
         required=True,
         help="Path to the manifest file listing training data."
-    )
-
-    parser = argparse.ArgumentParser(
-        formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
         "--use_precomputed_features",
