@@ -9,8 +9,8 @@ def get_parser():
     parser.add_argument(
         "--manifest",
         type=str,
-        required=True,
-        help="Path to the manifest file listing training data."
+        default=None,
+        help="Path to the manifest file listing training data. If not provided, the script will use its default data loading behavior."
     )
     parser.add_argument(
         "--use_precomputed_features",
