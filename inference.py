@@ -96,6 +96,8 @@ def evaluate_batch_ctc(args, model, batch, valid_len, split, inf, vocab,
 
 def run(args, model, data_loader, split, inf, vocab, wer_stats=None):
     for batch in data_loader:
+        if batch is None:
+            continue
         # shift [0, 28, ..., 28, 29] -> [28, ..., 28, 29]
         trg_expect = batch[1][:, 1:].to(args.device)
         # cut [0, 28, ..., 28, 29] -> [0, 28, ..., 28]
