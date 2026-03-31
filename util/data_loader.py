@@ -285,17 +285,23 @@ class CollateInferFn(object):
 
             targets += [tg.unsqueeze(0)]
             del waveform
-            del label
-
-        if tensors:
-            tensors = pad_sequence(tensors, 0)
-            targets = pad_sequence(targets, PAD_token)
-            len_out = torch.full((len(t_source),), tensors.size(2))
-            
-            if self.args.decoder_mode == "aed":
-                return tensors.squeeze(1), targets.squeeze(1), len_out
-            elif self.args.decoder_mode == "ctc":
-                return tensors.squeeze(1), targets.squeeze(1), torch.tensor(t_source)
-
-        else:
-            return None
+            else:
+                label = re.sub(r"<unk>|\[ unclear \]", "", label)
+                label = re.sub(r"[#^$?:;.!\[\]]+", "", label)
+                if len(label) < self.args.max_utterance_length:
+                    if not (hasattr(self.args, 'use_precomputed_features') and self.args.use_precomputed_features):
+                        # Only do this if not using precomputed features
+                        pass  # ...existing code for audio feature extraction...
+                    if self.args.bpe == True:
+                        tg = torch.LongTensor(
+                            [self.args.sp.bos_id()] + self.args.sp.encode_as_ids(label) + [self.args.sp.eos_id()])
+                    else:
+                        tg = torch.LongTensor(
+                            text_transform.text_to_int("^"+label.lower()+"$"))
+                    targets += [tg.unsqueeze(0)]
+                    t_len += [len(tg)]
+                    k = k+1
+                    del waveform
+                    del label
+                else:
+                    print('REMOVED:', ut_id, ' LAB:', label)
