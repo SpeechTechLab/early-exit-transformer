@@ -425,7 +425,7 @@ def get_parser():
 
     parser.add_argument(
         "--init_lr",
-        type=int,
+        type=float,
         default=1e-5,
         help="""
             Initial learning rate during training.
