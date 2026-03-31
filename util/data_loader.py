@@ -133,25 +133,25 @@ class CollateFn(object):
                 tensors += spec
                 del spec
             else:
-            label = re.sub(r"<unk>|\[ unclear \]", "", label)
-            label = re.sub(r"[#^$?:;.!\[\]]+", "", label)
-            if len(label) < self.args.max_utterance_length:
-                if not (hasattr(self.args, 'use_precomputed_features') and self.args.use_precomputed_features):
-                    # Only do this if not using precomputed features
-                    pass  # ...existing code for audio feature extraction...
-                if self.args.bpe == True:
-                    tg = torch.LongTensor(
-                        [self.args.sp.bos_id()] + self.args.sp.encode_as_ids(label) + [self.args.sp.eos_id()])
+                label = re.sub(r"<unk>|\[ unclear \]", "", label)
+                label = re.sub(r"[#^$?:;.!\[\]]+", "", label)
+                if len(label) < self.args.max_utterance_length:
+                    if not (hasattr(self.args, 'use_precomputed_features') and self.args.use_precomputed_features):
+                        # Only do this if not using precomputed features
+                        pass  # ...existing code for audio feature extraction...
+                    if self.args.bpe == True:
+                        tg = torch.LongTensor(
+                            [self.args.sp.bos_id()] + self.args.sp.encode_as_ids(label) + [self.args.sp.eos_id()])
+                    else:
+                        tg = torch.LongTensor(
+                            text_transform.text_to_int("^"+label.lower()+"$"))
+                    targets += [tg.unsqueeze(0)]
+                    t_len += [len(tg)]
+                    k = k+1
+                    del waveform
+                    del label
                 else:
-                    tg = torch.LongTensor(
-                        text_transform.text_to_int("^"+label.lower()+"$"))
-                targets += [tg.unsqueeze(0)]
-                t_len += [len(tg)]
-                k = k+1
-                del waveform
-                del label
-            else:
-                print('REMOVED:', ut_id, ' LAB:', label)
+                    print('REMOVED:', ut_id, ' LAB:', label)
 
         if tensors:
             tensors = pad_sequence(tensors, 0)
