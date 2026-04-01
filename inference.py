@@ -19,6 +19,7 @@ from util.data_loader import text_transform
 from util.epoch_timer import epoch_time
 from util.model_utils import *
 from util.tokenizer import *
+from util.data_loader import infer_glottal_feature_dim
 
 
 def evaluate_batch_ae(args, model, batch, valid_len, split, inf, vocab):
@@ -133,6 +134,28 @@ def main():
     # Parse config from command line arguments
     args = get_args()
 
+    input_features_length = args.n_mels
+    if args.use_precomputed_features:
+        if args.n_glottal_features <= 0:
+            raise ValueError(
+                "When --use_precomputed_features is set, --n_glottal_features must be > 0"
+            )
+        input_features_length = args.n_glottal_features
+    elif args.append_glottal_features:
+        if not args.glottal_features_path:
+            raise ValueError(
+                "When --append_glottal_features is set, --glottal_features_path must be provided"
+            )
+        if args.n_glottal_features > 0:
+            glottal_dim = args.n_glottal_features
+        else:
+            glottal_dim = infer_glottal_feature_dim(
+                args.glottal_features_path,
+                drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
+            )
+            args.n_glottal_features = glottal_dim
+        input_features_length = args.n_mels + glottal_dim
+
     #
     #   MODEL
     #
@@ -149,7 +172,7 @@ def main():
                                n_head=args.n_heads,
                                n_enc_layers=args.n_enc_layers_per_exit,
                                n_dec_layers=args.n_dec_layers,
-                               features_length=args.n_mels,
+                               features_length=input_features_length,
                                drop_prob=args.drop_prob,
                                depthwise_kernel_size=args.depthwise_kernel_size,
                                device=args.device).to(args.device)
@@ -165,7 +188,7 @@ def main():
                                     d_feed_forward=args.d_feed_forward,
                                     n_head=args.n_heads,
                                     n_enc_layers=args.n_enc_layers_per_exit,
-                                    features_length=args.n_mels,
+                                    features_length=input_features_length,
                                     drop_prob=args.drop_prob,
                                     depthwise_kernel_size=args.depthwise_kernel_size,
                                     device=args.device).to(args.device)
@@ -180,7 +203,7 @@ def main():
                                     d_feed_forward=args.d_feed_forward,
                                     n_head=args.n_heads,
                                     n_enc_layers=args.n_enc_layers_per_exit,
-                                    features_length=args.n_mels,
+                                    features_length=input_features_length,
                                     drop_prob=args.drop_prob,
                                     depthwise_kernel_size=args.depthwise_kernel_size,
                                     device=args.device).to(args.device)
@@ -195,7 +218,7 @@ def main():
                                     d_feed_forward=args.d_feed_forward,
                                     n_head=args.n_heads,
                                     n_enc_layers=args.n_enc_layers_per_exit,
-                                    features_length=args.n_mels,
+                                    features_length=input_features_length,
                                     drop_prob=args.drop_prob,
                                     depthwise_kernel_size=args.depthwise_kernel_size,
                                     device=args.device).to(args.device)
@@ -210,7 +233,7 @@ def main():
                                     d_feed_forward=args.d_feed_forward,
                                     n_head=args.n_heads,
                                     n_enc_layers=args.n_enc_layers_per_exit,
-                                    features_length=args.n_mels,
+                                    features_length=input_features_length,
                                     drop_prob=args.drop_prob,
                                     depthwise_kernel_size=args.depthwise_kernel_size,
                                     device=args.device).to(args.device)

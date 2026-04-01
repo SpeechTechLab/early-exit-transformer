@@ -1,10 +1,89 @@
 import re
+import os
+import csv
 import torch
 import torchaudio.transforms as T
 import torch.nn.functional as F
 
 # For loading precomputed features
 import numpy as np
+
+
+def _normalize_utt_id(raw_id):
+    base = os.path.basename(str(raw_id))
+    return os.path.splitext(base)[0]
+
+
+def _select_numeric_feature_columns(fieldnames, drop_mfcc):
+    meta_cols = {
+        "file_name", "speaker", "label", "task", "utt_id", "ut_id", "id", "path"
+    }
+    out = []
+    for col in fieldnames:
+        c = col.strip()
+        cl = c.lower()
+        if cl in meta_cols:
+            continue
+        if drop_mfcc and cl.startswith("mfcc_"):
+            continue
+        out.append(c)
+    return out
+
+
+def load_glottal_feature_map(csv_path, drop_mfcc=True):
+    feat_map = {}
+    feat_dim = None
+
+    with open(csv_path, "r", newline="") as f:
+        reader = csv.DictReader(f)
+        if reader.fieldnames is None:
+            raise ValueError(f"Invalid CSV (no header): {csv_path}")
+
+        cols = _select_numeric_feature_columns(reader.fieldnames, drop_mfcc)
+        id_candidates = ["file_name", "utt_id", "ut_id", "id", "path"]
+
+        for row in reader:
+            row_id = None
+            for key in id_candidates:
+                if key in row and row[key] is not None and str(row[key]).strip() != "":
+                    row_id = row[key]
+                    break
+            if row_id is None:
+                continue
+
+            values = []
+            for col in cols:
+                v = row.get(col, "")
+                try:
+                    x = float(v)
+                    if np.isnan(x) or np.isinf(x):
+                        x = 0.0
+                    values.append(x)
+                except (TypeError, ValueError):
+                    # Non-numeric columns are ignored.
+                    continue
+
+            if len(values) == 0:
+                continue
+
+            if feat_dim is None:
+                feat_dim = len(values)
+            elif len(values) != feat_dim:
+                raise ValueError(
+                    f"Inconsistent glottal feature dimension in {csv_path}: expected {feat_dim}, got {len(values)}"
+                )
+
+            feat_map[_normalize_utt_id(row_id)] = torch.tensor(values, dtype=torch.float32)
+
+    if feat_dim is None or len(feat_map) == 0:
+        raise ValueError(f"No usable glottal features found in CSV: {csv_path}")
+
+    return feat_map, feat_dim
+
+
+def infer_glottal_feature_dim(csv_path, drop_mfcc=True):
+    _, feat_dim = load_glottal_feature_map(csv_path, drop_mfcc=drop_mfcc)
+    return feat_dim
 
 
 def spec_transform(waveform, args):
@@ -164,6 +243,17 @@ class CollateFn(object):
 class CollatePaddingFn(object):
     def __init__(self, args):
         self.args = args
+        self.glottal_feat_map = None
+        self.glottal_dim = 0
+        self._missing_glottal_warned = False
+
+        if getattr(args, "append_glottal_features", False):
+            if not args.glottal_features_path:
+                raise ValueError("--glottal_features_path is required when --append_glottal_features is set")
+            self.glottal_feat_map, self.glottal_dim = load_glottal_feature_map(
+                args.glottal_features_path,
+                drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
+            )
 
     def __call__(self, batch,
                  SOS_token=None, EOS_token=None, PAD_token=None):
@@ -209,11 +299,37 @@ class CollatePaddingFn(object):
                 label = re.sub(r"[#^$?:;.!\[\]]+", "", label)
 
                 if len(label) < self.args.max_utterance_length:
-                    spec = spec_transform(waveform, self.args)  # .to(device)
-                    spec = melspec_transform(
-                        spec, self.args).to(self.args.device)
-                    t_source += [spec.size(2)]
-                    tensors += spec
+                    if getattr(self.args, "use_precomputed_features", False):
+                        # Precomputed tensors are expected as [feature_dim, time].
+                        spec = waveform.to(self.args.device).float()
+                        if spec.dim() == 1:
+                            spec = spec.unsqueeze(1)
+                    else:
+                        spec = spec_transform(waveform, self.args)  # .to(device)
+                        spec = melspec_transform(
+                            spec, self.args).to(self.args.device)
+
+                    if spec.dim() == 3:
+                        spec = spec.squeeze(0)
+
+                    if getattr(self.args, "append_glottal_features", False):
+                        uid = _normalize_utt_id(ut_id)
+                        g = self.glottal_feat_map.get(uid)
+                        if g is None:
+                            g = torch.zeros(self.glottal_dim, dtype=torch.float32)
+                            if not self._missing_glottal_warned:
+                                print(f"WARNING: missing glottal features for utterance '{uid}'. Using zeros.")
+                                self._missing_glottal_warned = True
+                        g = g.to(spec.device)
+                        g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
+                        spec = torch.cat([spec, g_rep], dim=0)
+
+                    if spec.dim() == 2:
+                        t_source += [spec.size(1)]
+                        tensors += [spec]
+                    else:
+                        t_source += [spec.size(2)]
+                        tensors += spec
                     del spec
 
                     if self.args.bpe == True:
@@ -247,6 +363,17 @@ class CollatePaddingFn(object):
 class CollateInferFn(object):
     def __init__(self, args):
         self.args = args
+        self.glottal_feat_map = None
+        self.glottal_dim = 0
+        self._missing_glottal_warned = False
+
+        if getattr(args, "append_glottal_features", False):
+            if not args.glottal_features_path:
+                raise ValueError("--glottal_features_path is required when --append_glottal_features is set")
+            self.glottal_feat_map, self.glottal_dim = load_glottal_feature_map(
+                args.glottal_features_path,
+                drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
+            )
 
     def __call__(self, batch,
                  SOS_token=None, EOS_token=None, PAD_token=None):
@@ -267,13 +394,29 @@ class CollateInferFn(object):
                 continue
             spec = spec_transform(waveform, self.args)  # .to(self.args.device)
             spec = melspec_transform(spec, self.args).to(self.args.device)
-            t_source += [spec.size(2)]
+
+            if spec.dim() == 3:
+                spec = spec.squeeze(0)
+
+            if getattr(self.args, "append_glottal_features", False):
+                uid = _normalize_utt_id(ut_id)
+                g = self.glottal_feat_map.get(uid)
+                if g is None:
+                    g = torch.zeros(self.glottal_dim, dtype=torch.float32)
+                    if not self._missing_glottal_warned:
+                        print(f"WARNING: missing glottal features for utterance '{uid}'. Using zeros.")
+                        self._missing_glottal_warned = True
+                g = g.to(spec.device)
+                g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
+                spec = torch.cat([spec, g_rep], dim=0)
+
+            t_source += [spec.size(1)]
 
             npads = 1000
             if spec.size(2) > 1000:
                 npads = 500
 
-            tensors += spec
+            tensors += [spec]
             del spec
             
             if self.args.bpe == True:

@@ -17,6 +17,35 @@ def get_parser():
         action="store_true",
         help="If set, loads features from precomputed feature files (e.g., CSV) instead of extracting from audio."
     )
+    parser.add_argument(
+        "--train_split",
+        type=str.lower,
+        default="all",
+        choices=["all", "100h", "train-clean-100"],
+        help="Training split selector. 'all' uses 960h, '100h' uses train-clean-100 only."
+    )
+    parser.add_argument(
+        "--n_glottal_features",
+        type=int,
+        default=0,
+        help="Number of precomputed feature channels per frame (required when --use_precomputed_features is set)."
+    )
+    parser.add_argument(
+        "--append_glottal_features",
+        action="store_true",
+        help="Append per-utterance glottal features from CSV to the acoustic input features computed from waveform."
+    )
+    parser.add_argument(
+        "--glottal_features_path",
+        type=str,
+        default=None,
+        help="Path to CSV containing per-utterance glottal features keyed by utterance/file id."
+    )
+    parser.add_argument(
+        "--glottal_drop_mfcc",
+        action="store_true",
+        help="When reading glottal CSV, ignore columns starting with 'mfcc_' to avoid duplicating acoustic information."
+    )
 
     # Model architecture
 
