@@ -2,14 +2,7 @@
 addpath("core","eval","framework","pipeline");
 
 data_dir = 'LibriSpeech/train-clean-100';
-% List all subdirectories (tasks) in the data_dir
-tasks = dir(data_dir);
-tasks = tasks([tasks.isdir]);
-tasks = tasks(~ismember({tasks.name}, {'.', '..'}));
-
-if isempty(tasks)
-    error('No subdirectories (tasks) found in the data directory: %s', data_dir);
-end
+tasks = struct('name', 'train-clean-100', 'dir', data_dir);
 
 algorithms = {'IAIF', 'QCP', 'TRLP'};
 
@@ -17,7 +10,7 @@ for t = 1:length(tasks)
     task_name = tasks(t).name;
     fprintf('Processing task: %s\n', task_name);
     
-    task_dir = fullfile(data_dir, task_name);
+    task_dir = tasks(t).dir;
     
     % Find all flac files recursively
     flac_files = dir(fullfile(task_dir, '**', '*.flac'));
@@ -88,11 +81,11 @@ for t = 1:length(tasks)
         end
         
         if all_processed
-            fprintf('  Skipping File %d/%d: %s (Already processed)\n', w, length(wav_files), file_name);
+            fprintf('  Skipping File %d/%d: %s (Already processed)\n', w, length(flac_files), file_name);
             continue;
         end
         
-        fprintf('  File %d/%d: %s\n', w, length(wav_files), file_name);
+        fprintf('  File %d/%d: %s\n', w, length(flac_files), file_name);
         
         try
             [x, fs] = audioread(file_path);
