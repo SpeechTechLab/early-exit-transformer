@@ -27,7 +27,7 @@ from xgboost import XGBClassifier
 # Hardcoded run configuration
 # Choose one or more from: 'svm', 'rf', 'xgb'
 # ------------------------------
-RUN_MODELS = [ 'xgb']
+RUN_MODELS = ['rf', 'xgb']
 
 def aggregate_mean_by_group(y: np.ndarray, p: np.ndarray, g: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Aggregate probabilities per cougher/group by mean. Cougher label is majority vote."""
@@ -225,10 +225,9 @@ def build_feature_subsets(X: pd.DataFrame):
             mfcc_cols.append(col)
             continue
 
-        root = col.split('_')[0]
-        if root in glottal_base_roots:
+        if any(col.startswith(f"{r}_") for r in glottal_base_roots):
             glottal_base_cols.append(col)
-        elif root in direct_roots:
+        elif any(col.startswith(f"{r}_") for r in direct_roots):
             direct_cols.append(col)
 
     subsets = {
@@ -264,6 +263,23 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
     for col in ['file_name', 'speaker', 'label', 'task']:
         if col in data.columns:
             data[col] = data[col].astype(str).str.strip()
+
+    # Recover missing metadata for Vowels-style IDs (e.g., AVPEPUDEAC0001a1 / AVPEPUDEA0001a1)
+    if 'file_name' in data.columns:
+        file_ids = data['file_name'].astype(str)
+        unknown_label = data['label'].astype(str).str.upper().eq('UNKNOWN') | data['label'].isna()
+        inferred_label = pd.Series(index=data.index, dtype='object')
+        inferred_label[file_ids.str.match(r'^AVPEPUDEAC\d{4}[aeiou]\d$', na=False)] = 'C'
+        inferred_label[file_ids.str.match(r'^AVPEPUDEA\d{4}[aeiou]\d$', na=False)] = inferred_label[file_ids.str.match(r'^AVPEPUDEA\d{4}[aeiou]\d$', na=False)].fillna('A')
+        data.loc[unknown_label, 'label'] = inferred_label[unknown_label].fillna(data.loc[unknown_label, 'label'])
+
+        unknown_speaker = data['speaker'].astype(str).str.upper().eq('UNKNOWN') | data['speaker'].isna()
+        c_digits = file_ids.str.extract(r'^AVPEPUDEAC(\d{4})', expand=False)
+        a_digits = file_ids.str.extract(r'^AVPEPUDEA(\d{4})', expand=False)
+        inferred_speaker = pd.Series(index=data.index, dtype='object')
+        inferred_speaker[c_digits.notna()] = 'C' + c_digits[c_digits.notna()]
+        inferred_speaker[a_digits.notna()] = inferred_speaker[a_digits.notna()].fillna('A' + a_digits[a_digits.notna()])
+        data.loc[unknown_speaker, 'speaker'] = inferred_speaker[unknown_speaker].fillna(data.loc[unknown_speaker, 'speaker'])
 
     # Labels
     data['label_num'] = data['label'].map({'A': 1, 'C': 0})
@@ -436,6 +452,11 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
     print(f"Saved task outputs to: {task_out_dir}")
 
 if __name__ == "__main__":
+    import argparse as _argparse
+    _parser = _argparse.ArgumentParser(description="Run classification on feature CSVs")
+    _parser.add_argument("--csv", nargs="+", default=None, help="Specific CSV files to process (default: all features_*.csv)")
+    _args = _parser.parse_args()
+
     base_results_dir = Path("classification_results")
     base_results_dir.mkdir(parents=True, exist_ok=True)
     run_timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -444,7 +465,7 @@ if __name__ == "__main__":
 
     print(f"Writing results under: {run_output_dir}")
 
-    csv_files = glob.glob("features_*.csv")
+    csv_files = _args.csv if _args.csv else glob.glob("features_*.csv")
     if not csv_files:
         print("No feature CSV files found. Please run the MATLAB extraction script first.")
     else:

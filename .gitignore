@@ -20,3 +20,7 @@ paper/
 runs/
 
 .venv/
+Glottal_signals_db/
+classification_results/
+.idea/
+Vowels/
