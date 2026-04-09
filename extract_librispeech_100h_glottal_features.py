@@ -215,7 +215,7 @@ def main():
     parser.add_argument(
         "--num_workers",
         type=int,
-        default=max(1, os.cpu_count() or 1),
+        default=max(1, min(16, os.cpu_count() or 1)),
         help="Number of parallel worker processes",
     )
     parser.add_argument(
