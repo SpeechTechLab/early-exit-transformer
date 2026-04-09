@@ -583,15 +583,15 @@ def extract_file_qcp(file_path):
         row[f"{key}_q50"] = q50
         row[f"{key}_q75"] = q75
 
-    # MFCC extraction tuned to more closely follow MATLAB's mfcc() defaults.
-    # Outputs: mfcc_1_mean, mfcc_1_std, ..., mfcc_39_mean, mfcc_39_std
-    mfcc_voiced = compute_matlab_like_mfcc(x, fs, frame_length, frame_shift, voiced_mask)
-
-    for c in range(1, 40):
-        vals = mfcc_voiced[:, c - 1] if mfcc_voiced.shape[0] > 0 else np.array([])
-        finite_vals = vals[np.isfinite(vals)]
-        row[f"mfcc_{c}_mean"] = float(np.mean(finite_vals)) if finite_vals.size > 0 else np.nan
-        row[f"mfcc_{c}_std"] = float(np.std(finite_vals)) if finite_vals.size > 0 else np.nan
+    # MFCC extraction disabled.
+    # To restore it later, uncomment the block below.
+    # mfcc_voiced = compute_matlab_like_mfcc(x, fs, frame_length, frame_shift, voiced_mask)
+    #
+    # for c in range(1, 40):
+    #     vals = mfcc_voiced[:, c - 1] if mfcc_voiced.shape[0] > 0 else np.array([])
+    #     finite_vals = vals[np.isfinite(vals)]
+    #     row[f"mfcc_{c}_mean"] = float(np.mean(finite_vals)) if finite_vals.size > 0 else np.nan
+    #     row[f"mfcc_{c}_std"] = float(np.std(finite_vals)) if finite_vals.size > 0 else np.nan
 
     file_stem = Path(file_path).stem
     row["file_name"] = file_stem
