@@ -46,6 +46,19 @@ def get_parser():
         action="store_true",
         help="When reading glottal CSV, ignore columns starting with 'mfcc_' to avoid duplicating acoustic information."
     )
+    parser.add_argument(
+        "--glottal_standardize",
+        dest="glottal_standardize",
+        action="store_true",
+        help="Apply per-dimension z-score standardization to glottal features loaded from CSV."
+    )
+    parser.add_argument(
+        "--no_glottal_standardize",
+        dest="glottal_standardize",
+        action="store_false",
+        help="Disable glottal feature standardization when loading CSV features."
+    )
+    parser.set_defaults(glottal_standardize=True)
 
     # Model architecture
 

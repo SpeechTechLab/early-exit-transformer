@@ -16,7 +16,8 @@ def _normalize_utt_id(raw_id):
 
 def _select_numeric_feature_columns(fieldnames, drop_mfcc):
     meta_cols = {
-        "file_name", "speaker", "label", "task", "utt_id", "ut_id", "id", "path"
+        "file_name", "speaker", "label", "task", "utt_id", "ut_id", "id", "path",
+        "chapter_id", "transcript", "text", "sentence"
     }
     out = []
     for col in fieldnames:
@@ -30,9 +31,16 @@ def _select_numeric_feature_columns(fieldnames, drop_mfcc):
     return out
 
 
-def load_glottal_feature_map(csv_path, drop_mfcc=True):
-    feat_map = {}
+def _standardize_features(feature_matrix, eps=1e-8):
+    mean = np.mean(feature_matrix, axis=0)
+    std = np.std(feature_matrix, axis=0)
+    std = np.where(std < eps, 1.0, std)
+    return (feature_matrix - mean) / std
+
+
+def load_glottal_feature_map(csv_path, drop_mfcc=True, standardize=True):
     feat_dim = None
+    per_utt_values = {}
 
     with open(csv_path, "r", newline="") as f:
         reader = csv.DictReader(f)
@@ -56,12 +64,11 @@ def load_glottal_feature_map(csv_path, drop_mfcc=True):
                 v = row.get(col, "")
                 try:
                     x = float(v)
-                    if np.isnan(x) or np.isinf(x):
-                        x = 0.0
-                    values.append(x)
                 except (TypeError, ValueError):
-                    # Non-numeric columns are ignored.
-                    continue
+                    x = 0.0
+                if np.isnan(x) or np.isinf(x):
+                    x = 0.0
+                values.append(x)
 
             if len(values) == 0:
                 continue
@@ -73,10 +80,38 @@ def load_glottal_feature_map(csv_path, drop_mfcc=True):
                     f"Inconsistent glottal feature dimension in {csv_path}: expected {feat_dim}, got {len(values)}"
                 )
 
-            feat_map[_normalize_utt_id(row_id)] = torch.tensor(values, dtype=torch.float32)
+            uid = _normalize_utt_id(row_id)
+            per_utt_values.setdefault(uid, []).append(np.asarray(values, dtype=np.float32))
 
-    if feat_dim is None or len(feat_map) == 0:
+    if feat_dim is None or len(per_utt_values) == 0:
         raise ValueError(f"No usable glottal features found in CSV: {csv_path}")
+
+    utt_ids = sorted(per_utt_values.keys())
+    per_utt_matrix = []
+    duplicate_rows = 0
+
+    for uid in utt_ids:
+        stacked = np.vstack(per_utt_values[uid])
+        if stacked.shape[0] > 1:
+            duplicate_rows += stacked.shape[0] - 1
+        # CSV can contain multiple rows per utterance; average them into one vector.
+        per_utt_matrix.append(np.mean(stacked, axis=0))
+
+    feature_matrix = np.vstack(per_utt_matrix)
+    if standardize:
+        feature_matrix = _standardize_features(feature_matrix)
+
+    feat_map = {
+        uid: torch.tensor(feature_matrix[idx], dtype=torch.float32)
+        for idx, uid in enumerate(utt_ids)
+    }
+
+    if duplicate_rows > 0:
+        print(
+            f"INFO: aggregated {duplicate_rows} duplicate glottal CSV rows into per-utterance means"
+        )
+    if standardize:
+        print("INFO: standardized glottal features with per-dimension z-score")
 
     return feat_map, feat_dim
 
@@ -253,6 +288,7 @@ class CollatePaddingFn(object):
             self.glottal_feat_map, self.glottal_dim = load_glottal_feature_map(
                 args.glottal_features_path,
                 drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
+                standardize=getattr(args, "glottal_standardize", True),
             )
 
     def __call__(self, batch,
@@ -373,6 +409,7 @@ class CollateInferFn(object):
             self.glottal_feat_map, self.glottal_dim = load_glottal_feature_map(
                 args.glottal_features_path,
                 drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
+                standardize=getattr(args, "glottal_standardize", True),
             )
 
     def __call__(self, batch,
