@@ -14,6 +14,22 @@ def _normalize_utt_id(raw_id):
     return os.path.splitext(base)[0]
 
 
+def _extract_utt_id(sample):
+    """Return utterance ID from dataset sample.
+
+    torchaudio LIBRISPEECH samples are:
+    (waveform, sample_rate, utterance, speaker_id, chapter_id, utterance_id)
+
+    Precomputed samples in this repo are:
+    (features, sample_rate, text, speaker_id, utt_id)
+    """
+    if len(sample) >= 6:
+        return sample[5]
+    if len(sample) >= 5:
+        return sample[4]
+    return "unknown"
+
+
 def _select_numeric_feature_columns(fieldnames, drop_mfcc):
     meta_cols = {
         "file_name", "speaker", "label", "task", "utt_id", "ut_id", "id", "path",
@@ -330,7 +346,9 @@ class CollatePaddingFn(object):
             tensors, targets, t_len, t_source, o_batch = [], [], [], [], []
             k = 0
 
-            for waveform, smp_freq, label, spk_id, ut_id, *_ in c_batch:
+            for sample in c_batch:
+                waveform, smp_freq, label, spk_id = sample[:4]
+                ut_id = _extract_utt_id(sample)
                 label = re.sub(r"<unk>|\[ unclear \]", "", label)
                 label = re.sub(r"[#^$?:;.!\[\]]+", "", label)
 
@@ -424,7 +442,9 @@ class CollateInferFn(object):
         tensors, targets, t_source = [], [], []
 
         # Gather in lists, and encode labels as indices
-        for waveform, smp_freq, label, spk_id, ut_id, *_ in batch:
+        for sample in batch:
+            waveform, smp_freq, label, spk_id = sample[:4]
+            ut_id = _extract_utt_id(sample)
             label = re.sub(r"[#^$,?:;.!]+|<unk>", "", label)
 
             if "ignore_time_segment_in_scoring" in label:
