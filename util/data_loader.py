@@ -449,10 +449,6 @@ class CollateInferFn(object):
 
             t_source += [spec.size(1)]
 
-            npads = 1000
-            if spec.size(2) > 1000:
-                npads = 500
-
             tensors += [spec]
             del spec
             
