@@ -461,3 +461,11 @@ class CollateInferFn(object):
 
             targets += [tg.unsqueeze(0)]
             del waveform
+            del label
+
+        if tensors:
+            tensors = pad_sequence(tensors, 0)
+            targets = pad_sequence(targets, PAD_token)
+            return tensors.squeeze(1), targets.squeeze(1), torch.tensor(t_source)
+
+        return None
