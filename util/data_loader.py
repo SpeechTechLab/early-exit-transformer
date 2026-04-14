@@ -25,7 +25,23 @@ def _extract_utt_id(sample):
     (features, sample_rate, text, speaker_id, utt_id)
     """
     if len(sample) >= 6:
-        return sample[5]
+        # torchaudio LIBRISPEECH provides (speaker_id, chapter_id, utterance_id)
+        # as numeric fields; glottal CSV keys use speaker-chapter-utterance.
+        speaker_id = sample[3]
+        chapter_id = sample[4]
+        utterance_id = sample[5]
+
+        utt_str = str(utterance_id)
+        if "-" in utt_str:
+            return utt_str
+
+        # Keep common LibriSpeech format: <speaker>-<chapter>-<utt:04d>
+        try:
+            utt_str = f"{int(utterance_id):04d}"
+        except Exception:
+            utt_str = utt_str.zfill(4)
+
+        return f"{speaker_id}-{chapter_id}-{utt_str}"
     if len(sample) >= 5:
         return sample[4]
     return "unknown"
