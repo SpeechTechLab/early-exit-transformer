@@ -1,6 +1,7 @@
 import re
 import os
 import csv
+from pathlib import Path
 import torch
 import torchaudio.transforms as T
 import torch.nn.functional as F
@@ -47,14 +48,41 @@ def _select_numeric_feature_columns(fieldnames, drop_mfcc):
     return out
 
 
-def _standardize_features(feature_matrix, eps=1e-8):
-    mean = np.mean(feature_matrix, axis=0)
-    std = np.std(feature_matrix, axis=0)
-    std = np.where(std < eps, 1.0, std)
+def _compute_standardization_stats(feature_matrix, eps=1e-8):
+    mean = np.mean(feature_matrix, axis=0).astype(np.float32)
+    std = np.std(feature_matrix, axis=0).astype(np.float32)
+    std = np.where(std < eps, 1.0, std).astype(np.float32)
+    return mean, std
+
+
+def _load_standardization_stats(stats_path, feat_dim):
+    data = np.load(stats_path)
+    if "mean" not in data or "std" not in data:
+        raise ValueError(
+            f"Invalid glottal stats file (expected keys 'mean' and 'std'): {stats_path}"
+        )
+    mean = np.asarray(data["mean"], dtype=np.float32).ravel()
+    std = np.asarray(data["std"], dtype=np.float32).ravel()
+    if mean.size != feat_dim or std.size != feat_dim:
+        raise ValueError(
+            f"Glottal stats dimension mismatch in {stats_path}: expected {feat_dim}, "
+            f"got mean={mean.size}, std={std.size}"
+        )
+    std = np.where(std < 1e-8, 1.0, std).astype(np.float32)
+    return mean, std
+
+
+def _apply_standardization(feature_matrix, mean, std):
     return (feature_matrix - mean) / std
 
 
-def load_glottal_feature_map(csv_path, drop_mfcc=True, standardize=True):
+def load_glottal_feature_map(
+    csv_path,
+    drop_mfcc=True,
+    standardize=True,
+    stats_in_path=None,
+    stats_out_path=None,
+):
     feat_dim = None
     per_utt_values = {}
 
@@ -113,9 +141,21 @@ def load_glottal_feature_map(csv_path, drop_mfcc=True, standardize=True):
         # CSV can contain multiple rows per utterance; average them into one vector.
         per_utt_matrix.append(np.mean(stacked, axis=0))
 
-    feature_matrix = np.vstack(per_utt_matrix)
+    feature_matrix = np.vstack(per_utt_matrix).astype(np.float32)
     if standardize:
-        feature_matrix = _standardize_features(feature_matrix)
+        if stats_in_path:
+            mean, std = _load_standardization_stats(stats_in_path, feat_dim)
+            print(f"INFO: loaded glottal normalization stats from {stats_in_path}")
+        else:
+            mean, std = _compute_standardization_stats(feature_matrix)
+
+        if stats_out_path:
+            stats_out = Path(stats_out_path)
+            stats_out.parent.mkdir(parents=True, exist_ok=True)
+            np.savez(stats_out, mean=mean, std=std)
+            print(f"INFO: saved glottal normalization stats to {stats_out}")
+
+        feature_matrix = _apply_standardization(feature_matrix, mean, std)
 
     feat_map = {
         uid: torch.tensor(feature_matrix[idx], dtype=torch.float32)
@@ -305,6 +345,8 @@ class CollatePaddingFn(object):
                 args.glottal_features_path,
                 drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
                 standardize=getattr(args, "glottal_standardize", True),
+                stats_in_path=getattr(args, "glottal_norm_stats_in", None),
+                stats_out_path=getattr(args, "glottal_norm_stats_out", None),
             )
 
     def __call__(self, batch,
@@ -428,6 +470,8 @@ class CollateInferFn(object):
                 args.glottal_features_path,
                 drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
                 standardize=getattr(args, "glottal_standardize", True),
+                stats_in_path=getattr(args, "glottal_norm_stats_in", None),
+                stats_out_path=getattr(args, "glottal_norm_stats_out", None),
             )
 
     def __call__(self, batch,

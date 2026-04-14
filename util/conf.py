@@ -59,6 +59,18 @@ def get_parser():
         help="Disable glottal feature standardization when loading CSV features."
     )
     parser.set_defaults(glottal_standardize=True)
+    parser.add_argument(
+        "--glottal_norm_stats_in",
+        type=str,
+        default=None,
+        help="Optional .npz path with train-set glottal normalization stats (keys: mean, std). When set, these stats are used for standardization."
+    )
+    parser.add_argument(
+        "--glottal_norm_stats_out",
+        type=str,
+        default=None,
+        help="Optional .npz output path to save glottal normalization stats computed from the provided CSV. Useful during training for strict eval later."
+    )
 
     # Model architecture
 
