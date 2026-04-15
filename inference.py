@@ -301,7 +301,10 @@ def main():
                 cov = 100.0 * found / total
                 print(f"[Glottal coverage: {found}/{total} ({cov:.2f}%)]")
             else:
-                print("[Glottal coverage: no items counted]")
+                if getattr(args, "n_workers", 0) > 0:
+                    print("[Glottal coverage unavailable with n_workers>0; rerun with --n_workers 0 for exact counts]")
+                else:
+                    print("[Glottal coverage: no items counted]")
 
         _print_wer_table(split, wer_stats, args.n_enc_exits, results)
 

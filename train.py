@@ -93,6 +93,20 @@ def train(args, model, iterator, optimizer, loss_fn, ctc_loss):
 
     loss_total = epoch_loss / len_iterator
 
+    if getattr(args, "append_glottal_features", False) and hasattr(iterator, "collate_fn"):
+        collate_fn = iterator.collate_fn
+        found = getattr(collate_fn, "glottal_found_count", 0)
+        missing = getattr(collate_fn, "glottal_missing_count", 0)
+        total = found + missing
+        if total > 0:
+            cov = 100.0 * found / total
+            print(f"[Train glottal coverage: {found}/{total} ({cov:.2f}%)]")
+        # Reset counters so each epoch reports its own coverage.
+        if hasattr(collate_fn, "glottal_found_count"):
+            collate_fn.glottal_found_count = 0
+        if hasattr(collate_fn, "glottal_missing_count"):
+            collate_fn.glottal_missing_count = 0
+
     return loss_total
 
 
