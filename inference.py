@@ -292,6 +292,17 @@ def main():
             run(model=model, args=args, data_loader=data_loader,
                 split=split, inf=inf, vocab=vocab, wer_stats=wer_stats)
 
+        if getattr(args, "append_glottal_features", False) and hasattr(data_loader, "collate_fn"):
+            collate_fn = data_loader.collate_fn
+            found = getattr(collate_fn, "glottal_found_count", 0)
+            missing = getattr(collate_fn, "glottal_missing_count", 0)
+            total = found + missing
+            if total > 0:
+                cov = 100.0 * found / total
+                print(f"[Glottal coverage: {found}/{total} ({cov:.2f}%)]")
+            else:
+                print("[Glottal coverage: no items counted]")
+
         _print_wer_table(split, wer_stats, args.n_enc_exits, results)
 
     if results and jiwer is not None:

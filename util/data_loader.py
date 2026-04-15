@@ -478,6 +478,8 @@ class CollateInferFn(object):
         self.glottal_feat_map = None
         self.glottal_dim = 0
         self._missing_glottal_warned = False
+        self.glottal_missing_count = 0
+        self.glottal_found_count = 0
 
         if getattr(args, "append_glottal_features", False):
             if not args.glottal_features_path:
@@ -520,9 +522,12 @@ class CollateInferFn(object):
                 g = self.glottal_feat_map.get(uid)
                 if g is None:
                     g = torch.zeros(self.glottal_dim, dtype=torch.float32)
+                    self.glottal_missing_count += 1
                     if not self._missing_glottal_warned:
                         print(f"WARNING: missing glottal features for utterance '{uid}'. Using zeros.")
                         self._missing_glottal_warned = True
+                else:
+                    self.glottal_found_count += 1
                 g = g.to(spec.device)
                 g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
                 spec = torch.cat([spec, g_rep], dim=0)
