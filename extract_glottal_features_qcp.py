@@ -468,40 +468,56 @@ def compute_matlab_like_mfcc(x, fs, frame_length, frame_shift, voiced_mask):
         return np.empty((0, 39))
 
 
-def extract_file_qcp(file_path):
+FRAME_FEATURE_KEYS = (
+    "NAQ",
+    "QOQ",
+    "HRF",
+    "H1H2",
+    "G_RMS",
+    "G_ZCR",
+    "G_CREST",
+    "DG_PEAK",
+    "RES_RMS",
+    "RES_LEN_RATIO",
+)
+
+
+def _load_and_preprocess_audio(file_path):
     x, fs = sf.read(file_path)
     if x.ndim > 1:
         x = np.mean(x, axis=1)
     x = x.astype(np.float64).ravel()
     if len(x) < 32:
-        return None
+        return None, None
 
     if skew(x, bias=False) < 0:
         x = -x
 
-    b_hp, a_hp = butter(2, 50.0 / (fs / 2.0), btype="high")
-    x = filtfilt(b_hp, a_hp, x)
+    hp_cut = 50.0 / (fs / 2.0)
+    if 0.0 < hp_cut < 1.0:
+        b_hp, a_hp = butter(2, hp_cut, btype="high")
+        x = filtfilt(b_hp, a_hp, x)
 
-    frame_length = int(round(0.050 * fs))
-    frame_shift = int(round(0.010 * fs))
+    return x, fs
 
-    frames, _ = create_fixed_frames(x, frame_length, frame_shift)
+
+def _extract_qcp_frame_features(x, fs, frame_length, frame_shift):
+    frames, frame_indices = create_fixed_frames(x, frame_length, frame_shift)
     num_frames = len(frames)
     if num_frames == 0:
         return None
 
     pitch_info = estimate_pitch(x, fs)
     f0v = pitch_info["f0"]
-    valid_f0 = f0v[f0v > 0]
+    f0_per_frame = np.zeros(num_frames, dtype=np.float64)
+    n_f0 = min(num_frames, f0v.size)
+    if n_f0 > 0:
+        f0_per_frame[:n_f0] = f0v[:n_f0]
+
+    valid_f0 = f0_per_frame[f0_per_frame > 0]
     global_f0 = float(np.median(valid_f0)) if valid_f0.size else 120.0
 
-    voiced_mask = f0v > 50
-    if voiced_mask.size < num_frames:
-        vm = np.zeros(num_frames, dtype=bool)
-        vm[:voiced_mask.size] = voiced_mask
-        voiced_mask = vm
-    else:
-        voiced_mask = voiced_mask[:num_frames]
+    voiced_mask = f0_per_frame > 50
 
     options = {
         "f0": global_f0,
@@ -512,16 +528,7 @@ def extract_file_qcp(file_path):
         "nramp": int(round(fs / 8000.0 * 7)),
     }
 
-    NAQ_all = np.full(num_frames, np.nan)
-    QOQ_all = np.full(num_frames, np.nan)
-    HRF_all = np.full(num_frames, np.nan)
-    H1H2_all = np.full(num_frames, np.nan)
-    G_RMS_all = np.full(num_frames, np.nan)
-    G_ZCR_all = np.full(num_frames, np.nan)
-    G_CREST_all = np.full(num_frames, np.nan)
-    DG_PEAK_all = np.full(num_frames, np.nan)
-    RES_RMS_all = np.full(num_frames, np.nan)
-    RES_LEN_RATIO_all = np.full(num_frames, np.nan)
+    features = {k: np.full(num_frames, np.nan, dtype=np.float64) for k in FRAME_FEATURE_KEYS}
 
     for i, frame in enumerate(frames):
         try:
@@ -530,46 +537,66 @@ def extract_file_qcp(file_path):
                 continue
 
             metrics = compute_glottal_metrics(g_flow, fs, global_f0)
-            NAQ_all[i] = metrics["NAQ"]
-            QOQ_all[i] = metrics["QOQ"]
-            HRF_all[i] = metrics["HRF"]
-            H1H2_all[i] = metrics["H1H2"]
+            features["NAQ"][i] = metrics["NAQ"]
+            features["QOQ"][i] = metrics["QOQ"]
+            features["HRF"][i] = metrics["HRF"]
+            features["H1H2"][i] = metrics["H1H2"]
 
             g_centered = g_flow - np.mean(g_flow)
             g_rms = np.sqrt(np.mean(g_centered ** 2))
-            G_RMS_all[i] = g_rms
-            G_ZCR_all[i] = np.sum(np.abs(np.diff(g_centered > 0))) / max(len(g_centered) - 1, 1)
-            G_CREST_all[i] = np.max(np.abs(g_centered)) / max(g_rms, np.finfo(float).eps)
-            DG_PEAK_all[i] = np.max(np.abs(np.diff(g_centered))) if len(g_centered) > 1 else np.nan
+            features["G_RMS"][i] = g_rms
+            features["G_ZCR"][i] = np.sum(np.abs(np.diff(g_centered > 0))) / max(len(g_centered) - 1, 1)
+            features["G_CREST"][i] = np.max(np.abs(g_centered)) / max(g_rms, np.finfo(float).eps)
+            features["DG_PEAK"][i] = np.max(np.abs(np.diff(g_centered))) if len(g_centered) > 1 else np.nan
 
             if np.isscalar(residual):
-                RES_RMS_all[i] = abs(float(residual))
-                RES_LEN_RATIO_all[i] = np.nan
+                features["RES_RMS"][i] = abs(float(residual))
+                features["RES_LEN_RATIO"][i] = np.nan
             else:
                 residual = np.asarray(residual, dtype=np.float64).ravel()
                 if residual.size > 1:
-                    RES_RMS_all[i] = np.sqrt(np.mean(residual ** 2))
-                    RES_LEN_RATIO_all[i] = residual.size / max(frame.size, 1)
+                    features["RES_RMS"][i] = np.sqrt(np.mean(residual ** 2))
+                    features["RES_LEN_RATIO"][i] = residual.size / max(frame.size, 1)
                 elif residual.size == 1:
-                    RES_RMS_all[i] = abs(float(residual[0]))
-                    RES_LEN_RATIO_all[i] = np.nan
+                    features["RES_RMS"][i] = abs(float(residual[0]))
+                    features["RES_LEN_RATIO"][i] = np.nan
         except Exception:
             continue
+
+    return {
+        "features": features,
+        "voiced_mask": voiced_mask,
+        "frame_indices": frame_indices,
+        "f0_per_frame": f0_per_frame,
+        "num_frames": num_frames,
+    }
+
+
+def extract_file_qcp(file_path):
+    x, fs = _load_and_preprocess_audio(file_path)
+    if x is None:
+        return None
+
+    frame_length = int(round(0.050 * fs))
+    frame_shift = int(round(0.010 * fs))
+
+    frame_data = _extract_qcp_frame_features(
+        x=x,
+        fs=fs,
+        frame_length=frame_length,
+        frame_shift=frame_shift,
+    )
+    if frame_data is None:
+        return None
+
+    features = frame_data["features"]
+    voiced_mask = frame_data["voiced_mask"]
 
     def voiced_clean(a):
         return a[voiced_mask]
 
     feature_data = {
-        "NAQ": voiced_clean(NAQ_all),
-        "QOQ": voiced_clean(QOQ_all),
-        "HRF": voiced_clean(HRF_all),
-        "H1H2": voiced_clean(H1H2_all),
-        "G_RMS": voiced_clean(G_RMS_all),
-        "G_ZCR": voiced_clean(G_ZCR_all),
-        "G_CREST": voiced_clean(G_CREST_all),
-        "DG_PEAK": voiced_clean(DG_PEAK_all),
-        "RES_RMS": voiced_clean(RES_RMS_all),
-        "RES_LEN_RATIO": voiced_clean(RES_LEN_RATIO_all),
+        key: voiced_clean(features[key]) for key in FRAME_FEATURE_KEYS
     }
 
     row = {}
@@ -599,6 +626,64 @@ def extract_file_qcp(file_path):
     row["label"] = "unknown"
     row["task"] = "Glottal_signals_db"
     return row
+
+
+def extract_file_qcp_framewise(
+    file_path,
+    frame_length=320,
+    frame_shift=160,
+    keep_unvoiced=True,
+    unvoiced_fill=0.0,
+):
+    """Extract frame-level QCP glottal features.
+
+    Defaults use LibriSpeech training-style framing at 16 kHz:
+    - frame_length=320 samples (20 ms)
+    - frame_shift=160 samples (10 ms)
+    """
+    x, fs = _load_and_preprocess_audio(file_path)
+    if x is None:
+        return []
+
+    frame_data = _extract_qcp_frame_features(
+        x=x,
+        fs=fs,
+        frame_length=int(frame_length),
+        frame_shift=int(frame_shift),
+    )
+    if frame_data is None:
+        return []
+
+    features = frame_data["features"]
+    voiced_mask = frame_data["voiced_mask"]
+    frame_indices = frame_data["frame_indices"]
+    f0_per_frame = frame_data["f0_per_frame"]
+    file_stem = Path(file_path).stem
+
+    rows = []
+    for i in range(frame_data["num_frames"]):
+        voiced = bool(voiced_mask[i])
+        if not keep_unvoiced and not voiced:
+            continue
+
+        row = {
+            "file_name": file_stem,
+            "frame_idx": int(i),
+            "frame_start_sample": int(frame_indices[i]),
+            "frame_start_sec": float(frame_indices[i] / fs),
+            "voiced": int(voiced),
+            "f0": float(f0_per_frame[i]),
+        }
+
+        for key in FRAME_FEATURE_KEYS:
+            v = features[key][i]
+            if not np.isfinite(v):
+                v = unvoiced_fill
+            row[key] = float(v)
+
+        rows.append(row)
+
+    return rows
 
 
 def run(input_dir, output_csv, max_files=0, save_every=50, resume=False):

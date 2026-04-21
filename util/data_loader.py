@@ -50,7 +50,8 @@ def _extract_utt_id(sample):
 def _select_numeric_feature_columns(fieldnames, drop_mfcc):
     meta_cols = {
         "file_name", "speaker", "label", "task", "utt_id", "ut_id", "id", "path",
-        "chapter_id", "transcript", "text", "sentence"
+        "chapter_id", "transcript", "text", "sentence",
+        "frame_idx", "frame_start_sample", "frame_start_sec", "voiced", "f0"
     }
     out = []
     for col in fieldnames:
@@ -101,6 +102,7 @@ def load_glottal_feature_map(
 ):
     feat_dim = None
     per_utt_values = {}
+    frame_level = False
 
     with open(csv_path, "r", newline="") as f:
         reader = csv.DictReader(f)
@@ -109,6 +111,7 @@ def load_glottal_feature_map(
 
         cols = _select_numeric_feature_columns(reader.fieldnames, drop_mfcc)
         id_candidates = ["file_name", "utt_id", "ut_id", "id", "path"]
+        frame_level = any(str(c).strip().lower() == "frame_idx" for c in reader.fieldnames)
 
         for row in reader:
             row_id = None
@@ -141,12 +144,72 @@ def load_glottal_feature_map(
                 )
 
             uid = _normalize_utt_id(row_id)
-            per_utt_values.setdefault(uid, []).append(np.asarray(values, dtype=np.float32))
+            vec = np.asarray(values, dtype=np.float32)
+
+            if frame_level:
+                raw_idx = row.get("frame_idx", "")
+                try:
+                    frame_idx = int(float(raw_idx))
+                except (TypeError, ValueError):
+                    frame_idx = len(per_utt_values.get(uid, []))
+                per_utt_values.setdefault(uid, []).append((frame_idx, vec))
+            else:
+                per_utt_values.setdefault(uid, []).append(vec)
 
     if feat_dim is None or len(per_utt_values) == 0:
         raise ValueError(f"No usable glottal features found in CSV: {csv_path}")
 
     utt_ids = sorted(per_utt_values.keys())
+
+    if frame_level:
+        per_utt_matrix = {}
+        duplicate_rows = 0
+
+        for uid in utt_ids:
+            by_frame = {}
+            for frame_idx, vec in per_utt_values[uid]:
+                by_frame.setdefault(frame_idx, []).append(vec)
+
+            sorted_items = sorted(by_frame.items(), key=lambda x: x[0])
+            frame_vectors = []
+            for _, vals in sorted_items:
+                if len(vals) > 1:
+                    duplicate_rows += len(vals) - 1
+                frame_vectors.append(np.mean(np.vstack(vals), axis=0))
+            per_utt_matrix[uid] = np.vstack(frame_vectors).astype(np.float32)
+
+        feature_matrix = np.vstack([per_utt_matrix[uid] for uid in utt_ids]).astype(np.float32)
+
+        if standardize:
+            if stats_in_path:
+                mean, std = _load_standardization_stats(stats_in_path, feat_dim)
+                print(f"INFO: loaded glottal normalization stats from {stats_in_path}")
+            else:
+                mean, std = _compute_standardization_stats(feature_matrix)
+
+            if stats_out_path:
+                stats_out = Path(stats_out_path)
+                stats_out.parent.mkdir(parents=True, exist_ok=True)
+                np.savez(stats_out, mean=mean, std=std)
+                print(f"INFO: saved glottal normalization stats to {stats_out}")
+
+            for uid in utt_ids:
+                per_utt_matrix[uid] = _apply_standardization(per_utt_matrix[uid], mean, std).astype(np.float32)
+
+        feat_map = {
+            uid: torch.tensor(per_utt_matrix[uid].T, dtype=torch.float32)
+            for uid in utt_ids
+        }
+
+        if duplicate_rows > 0:
+            print(
+                f"INFO: aggregated {duplicate_rows} duplicate frame rows in glottal CSV"
+            )
+        if standardize:
+            print("INFO: standardized frame-level glottal features with per-dimension z-score")
+        print("INFO: loaded frame-level glottal features keyed by utterance and frame index")
+        return feat_map, feat_dim
+
     per_utt_matrix = []
     duplicate_rows = 0
 
@@ -429,15 +492,34 @@ class CollatePaddingFn(object):
                         uid = _normalize_utt_id(ut_id)
                         g = self.glottal_feat_map.get(uid)
                         if g is None:
-                            g = torch.zeros(self.glottal_dim, dtype=torch.float32)
+                            g_rep = torch.zeros(self.glottal_dim, spec.size(1), dtype=torch.float32)
                             self.glottal_missing_count += 1
                             if not self._missing_glottal_warned:
                                 print(f"WARNING: missing glottal features for utterance '{uid}'. Using zeros.")
                                 self._missing_glottal_warned = True
                         else:
                             self.glottal_found_count += 1
-                        g = g.to(spec.device)
-                        g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
+                            g = g.to(spec.device)
+                            if g.dim() == 1:
+                                g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
+                            elif g.dim() == 2:
+                                if g.size(1) == spec.size(1):
+                                    g_rep = g
+                                else:
+                                    g_rep = F.interpolate(
+                                        g.unsqueeze(0),
+                                        size=spec.size(1),
+                                        mode="linear",
+                                        align_corners=False,
+                                    ).squeeze(0)
+                            else:
+                                g = g.reshape(self.glottal_dim, -1)
+                                g_rep = F.interpolate(
+                                    g.unsqueeze(0),
+                                    size=spec.size(1),
+                                    mode="linear",
+                                    align_corners=False,
+                                ).squeeze(0)
                         spec = torch.cat([spec, g_rep], dim=0)
 
                     if spec.dim() == 2:
@@ -525,15 +607,34 @@ class CollateInferFn(object):
                 uid = _normalize_utt_id(ut_id)
                 g = self.glottal_feat_map.get(uid)
                 if g is None:
-                    g = torch.zeros(self.glottal_dim, dtype=torch.float32)
+                    g_rep = torch.zeros(self.glottal_dim, spec.size(1), dtype=torch.float32)
                     self.glottal_missing_count += 1
                     if not self._missing_glottal_warned:
                         print(f"WARNING: missing glottal features for utterance '{uid}'. Using zeros.")
                         self._missing_glottal_warned = True
                 else:
                     self.glottal_found_count += 1
-                g = g.to(spec.device)
-                g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
+                    g = g.to(spec.device)
+                    if g.dim() == 1:
+                        g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
+                    elif g.dim() == 2:
+                        if g.size(1) == spec.size(1):
+                            g_rep = g
+                        else:
+                            g_rep = F.interpolate(
+                                g.unsqueeze(0),
+                                size=spec.size(1),
+                                mode="linear",
+                                align_corners=False,
+                            ).squeeze(0)
+                    else:
+                        g = g.reshape(self.glottal_dim, -1)
+                        g_rep = F.interpolate(
+                            g.unsqueeze(0),
+                            size=spec.size(1),
+                            mode="linear",
+                            align_corners=False,
+                        ).squeeze(0)
                 spec = torch.cat([spec, g_rep], dim=0)
 
             t_source += [spec.size(1)]
