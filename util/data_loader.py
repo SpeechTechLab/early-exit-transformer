@@ -101,8 +101,7 @@ def load_glottal_feature_map(
     stats_out_path=None,
 ):
     feat_dim = None
-    per_utt_values = {}
-    frame_level = False
+    id_candidates = ["file_name", "utt_id", "ut_id", "id", "path"]
 
     with open(csv_path, "r", newline="") as f:
         reader = csv.DictReader(f)
@@ -110,8 +109,130 @@ def load_glottal_feature_map(
             raise ValueError(f"Invalid CSV (no header): {csv_path}")
 
         cols = _select_numeric_feature_columns(reader.fieldnames, drop_mfcc)
-        id_candidates = ["file_name", "utt_id", "ut_id", "id", "path"]
         frame_level = any(str(c).strip().lower() == "frame_idx" for c in reader.fieldnames)
+
+        if not frame_level:
+            per_utt_values = {}
+            for row in reader:
+                row_id = None
+                for key in id_candidates:
+                    if key in row and row[key] is not None and str(row[key]).strip() != "":
+                        row_id = row[key]
+                        break
+                if row_id is None:
+                    continue
+
+                values = []
+                for col in cols:
+                    v = row.get(col, "")
+                    try:
+                        x = float(v)
+                    except (TypeError, ValueError):
+                        x = 0.0
+                    if np.isnan(x) or np.isinf(x):
+                        x = 0.0
+                    values.append(x)
+
+                if len(values) == 0:
+                    continue
+
+                if feat_dim is None:
+                    feat_dim = len(values)
+                elif len(values) != feat_dim:
+                    raise ValueError(
+                        f"Inconsistent glottal feature dimension in {csv_path}: expected {feat_dim}, got {len(values)}"
+                    )
+
+                uid = _normalize_utt_id(row_id)
+                per_utt_values.setdefault(uid, []).append(np.asarray(values, dtype=np.float32))
+
+            if feat_dim is None or len(per_utt_values) == 0:
+                raise ValueError(f"No usable glottal features found in CSV: {csv_path}")
+
+            utt_ids = sorted(per_utt_values.keys())
+            per_utt_matrix = []
+            duplicate_rows = 0
+
+            for uid in utt_ids:
+                stacked = np.vstack(per_utt_values[uid])
+                if stacked.shape[0] > 1:
+                    duplicate_rows += stacked.shape[0] - 1
+                # CSV can contain multiple rows per utterance; average them into one vector.
+                per_utt_matrix.append(np.mean(stacked, axis=0))
+
+            feature_matrix = np.vstack(per_utt_matrix).astype(np.float32)
+            if standardize:
+                if stats_in_path:
+                    mean, std = _load_standardization_stats(stats_in_path, feat_dim)
+                    print(f"INFO: loaded glottal normalization stats from {stats_in_path}")
+                else:
+                    mean, std = _compute_standardization_stats(feature_matrix)
+
+                if stats_out_path:
+                    stats_out = Path(stats_out_path)
+                    stats_out.parent.mkdir(parents=True, exist_ok=True)
+                    np.savez(stats_out, mean=mean, std=std)
+                    print(f"INFO: saved glottal normalization stats to {stats_out}")
+
+                feature_matrix = _apply_standardization(feature_matrix, mean, std)
+
+            feat_map = {
+                uid: torch.tensor(feature_matrix[idx], dtype=torch.float32)
+                for idx, uid in enumerate(utt_ids)
+            }
+
+            if duplicate_rows > 0:
+                print(
+                    f"INFO: aggregated {duplicate_rows} duplicate glottal CSV rows into per-utterance means"
+                )
+            if standardize:
+                print("INFO: standardized glottal features with per-dimension z-score")
+
+            return feat_map, feat_dim
+
+        print("INFO: loading frame-level glottal CSV (streaming mode). This can take several minutes...")
+
+        per_utt_matrix = {}
+        duplicate_rows = 0
+        processed_rows = 0
+
+        current_uid = None
+        current_frame_idxs = []
+        current_vecs = []
+
+        def flush_current_block(uid, frame_idxs, vecs):
+            nonlocal duplicate_rows
+
+            if uid is None or len(vecs) == 0:
+                return
+
+            idx_arr = np.asarray(frame_idxs, dtype=np.int64)
+            val_arr = np.vstack(vecs).astype(np.float32, copy=False)
+
+            if feat_dim is not None and val_arr.shape[1] != feat_dim:
+                raise ValueError(
+                    f"Inconsistent frame-level glottal feature dimension in {csv_path}: "
+                    f"expected {feat_dim}, got {val_arr.shape[1]}"
+                )
+
+            order = np.argsort(idx_arr, kind="stable")
+            idx_arr = idx_arr[order]
+            val_arr = val_arr[order]
+
+            uniq, inverse, counts = np.unique(idx_arr, return_inverse=True, return_counts=True)
+            if np.any(counts > 1):
+                duplicate_rows += int(np.sum(counts - 1))
+                agg = np.zeros((uniq.size, val_arr.shape[1]), dtype=np.float32)
+                np.add.at(agg, inverse, val_arr)
+                agg /= counts[:, None].astype(np.float32)
+                block = agg
+            else:
+                block = val_arr
+
+            if uid in per_utt_matrix:
+                per_utt_matrix[uid] = np.vstack([per_utt_matrix[uid], block])
+            else:
+                per_utt_matrix[uid] = block
 
         for row in reader:
             row_id = None
@@ -140,93 +261,58 @@ def load_glottal_feature_map(
                 feat_dim = len(values)
             elif len(values) != feat_dim:
                 raise ValueError(
-                    f"Inconsistent glottal feature dimension in {csv_path}: expected {feat_dim}, got {len(values)}"
+                    f"Inconsistent frame-level glottal feature dimension in {csv_path}: expected {feat_dim}, got {len(values)}"
                 )
 
             uid = _normalize_utt_id(row_id)
-            vec = np.asarray(values, dtype=np.float32)
+            raw_idx = row.get("frame_idx", "")
+            try:
+                frame_idx = int(float(raw_idx))
+            except (TypeError, ValueError):
+                frame_idx = len(current_frame_idxs)
 
-            if frame_level:
-                raw_idx = row.get("frame_idx", "")
-                try:
-                    frame_idx = int(float(raw_idx))
-                except (TypeError, ValueError):
-                    frame_idx = len(per_utt_values.get(uid, []))
-                per_utt_values.setdefault(uid, []).append((frame_idx, vec))
-            else:
-                per_utt_values.setdefault(uid, []).append(vec)
+            if current_uid is None:
+                current_uid = uid
 
-    if feat_dim is None or len(per_utt_values) == 0:
-        raise ValueError(f"No usable glottal features found in CSV: {csv_path}")
+            if uid != current_uid:
+                flush_current_block(current_uid, current_frame_idxs, current_vecs)
+                current_uid = uid
+                current_frame_idxs = []
+                current_vecs = []
 
-    utt_ids = sorted(per_utt_values.keys())
+            current_frame_idxs.append(frame_idx)
+            current_vecs.append(np.asarray(values, dtype=np.float32))
 
-    if frame_level:
-        per_utt_matrix = {}
-        duplicate_rows = 0
+            processed_rows += 1
+            if processed_rows % 1000000 == 0:
+                print(f"INFO: parsed {processed_rows:,} frame rows from {csv_path}")
 
-        for uid in utt_ids:
-            by_frame = {}
-            for frame_idx, vec in per_utt_values[uid]:
-                by_frame.setdefault(frame_idx, []).append(vec)
+        flush_current_block(current_uid, current_frame_idxs, current_vecs)
 
-            sorted_items = sorted(by_frame.items(), key=lambda x: x[0])
-            frame_vectors = []
-            for _, vals in sorted_items:
-                if len(vals) > 1:
-                    duplicate_rows += len(vals) - 1
-                frame_vectors.append(np.mean(np.vstack(vals), axis=0))
-            per_utt_matrix[uid] = np.vstack(frame_vectors).astype(np.float32)
+    if feat_dim is None or len(per_utt_matrix) == 0:
+        raise ValueError(f"No usable frame-level glottal features found in CSV: {csv_path}")
 
-        feature_matrix = np.vstack([per_utt_matrix[uid] for uid in utt_ids]).astype(np.float32)
+    utt_ids = sorted(per_utt_matrix.keys())
 
-        if standardize:
-            if stats_in_path:
-                mean, std = _load_standardization_stats(stats_in_path, feat_dim)
-                print(f"INFO: loaded glottal normalization stats from {stats_in_path}")
-            else:
-                mean, std = _compute_standardization_stats(feature_matrix)
-
-            if stats_out_path:
-                stats_out = Path(stats_out_path)
-                stats_out.parent.mkdir(parents=True, exist_ok=True)
-                np.savez(stats_out, mean=mean, std=std)
-                print(f"INFO: saved glottal normalization stats to {stats_out}")
-
-            for uid in utt_ids:
-                per_utt_matrix[uid] = _apply_standardization(per_utt_matrix[uid], mean, std).astype(np.float32)
-
-        feat_map = {
-            uid: torch.tensor(per_utt_matrix[uid].T, dtype=torch.float32)
-            for uid in utt_ids
-        }
-
-        if duplicate_rows > 0:
-            print(
-                f"INFO: aggregated {duplicate_rows} duplicate frame rows in glottal CSV"
-            )
-        if standardize:
-            print("INFO: standardized frame-level glottal features with per-dimension z-score")
-        print("INFO: loaded frame-level glottal features keyed by utterance and frame index")
-        return feat_map, feat_dim
-
-    per_utt_matrix = []
-    duplicate_rows = 0
-
-    for uid in utt_ids:
-        stacked = np.vstack(per_utt_values[uid])
-        if stacked.shape[0] > 1:
-            duplicate_rows += stacked.shape[0] - 1
-        # CSV can contain multiple rows per utterance; average them into one vector.
-        per_utt_matrix.append(np.mean(stacked, axis=0))
-
-    feature_matrix = np.vstack(per_utt_matrix).astype(np.float32)
     if standardize:
         if stats_in_path:
             mean, std = _load_standardization_stats(stats_in_path, feat_dim)
             print(f"INFO: loaded glottal normalization stats from {stats_in_path}")
         else:
-            mean, std = _compute_standardization_stats(feature_matrix)
+            total_rows = 0
+            sum_vec = np.zeros(feat_dim, dtype=np.float64)
+            sqsum_vec = np.zeros(feat_dim, dtype=np.float64)
+            for uid in utt_ids:
+                mat = per_utt_matrix[uid]
+                total_rows += mat.shape[0]
+                sum_vec += np.sum(mat, axis=0, dtype=np.float64)
+                sqsum_vec += np.sum(np.square(mat, dtype=np.float64), axis=0, dtype=np.float64)
+
+            mean = (sum_vec / max(total_rows, 1)).astype(np.float32)
+            var = (sqsum_vec / max(total_rows, 1)) - np.square(mean.astype(np.float64))
+            var = np.maximum(var, 0.0)
+            std = np.sqrt(var).astype(np.float32)
+            std = np.where(std < 1e-8, 1.0, std).astype(np.float32)
 
         if stats_out_path:
             stats_out = Path(stats_out_path)
@@ -234,19 +320,22 @@ def load_glottal_feature_map(
             np.savez(stats_out, mean=mean, std=std)
             print(f"INFO: saved glottal normalization stats to {stats_out}")
 
-        feature_matrix = _apply_standardization(feature_matrix, mean, std)
+        for uid in utt_ids:
+            per_utt_matrix[uid] = _apply_standardization(per_utt_matrix[uid], mean, std).astype(np.float32)
 
     feat_map = {
-        uid: torch.tensor(feature_matrix[idx], dtype=torch.float32)
-        for idx, uid in enumerate(utt_ids)
+        uid: torch.tensor(per_utt_matrix[uid].T, dtype=torch.float32)
+        for uid in utt_ids
     }
 
     if duplicate_rows > 0:
-        print(
-            f"INFO: aggregated {duplicate_rows} duplicate glottal CSV rows into per-utterance means"
-        )
+        print(f"INFO: aggregated {duplicate_rows} duplicate frame rows in glottal CSV")
+    print(
+        f"INFO: loaded frame-level glottal features for {len(feat_map)} utterances "
+        f"from {processed_rows:,} rows"
+    )
     if standardize:
-        print("INFO: standardized glottal features with per-dimension z-score")
+        print("INFO: standardized frame-level glottal features with per-dimension z-score")
 
     return feat_map, feat_dim
 
