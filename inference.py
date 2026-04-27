@@ -3,7 +3,20 @@ import os
 import sys
 import re
 from torch import nn, optim
+import os
+
+# Avoid TorchCodec backend (requires FFmpeg libs).
+os.environ.setdefault("TORCHAUDIO_USE_TORCHCODEC", "0")
+
 import torchaudio
+
+try:
+    torchaudio.set_audio_backend("sox_io")
+except Exception:
+    try:
+        torchaudio.set_audio_backend("soundfile")
+    except Exception:
+        pass
 from torchaudio.models.decoder import ctc_decoder
 
 try:
@@ -74,6 +87,13 @@ def evaluate_batch_ctc(args, model, batch, valid_len, split, inf, vocab,
     encoder = model(batch[0].to(args.device), valid_len)
     i = 0
 
+    def _sp_decode_tokens(obj) -> str:
+        # SentencePiece expects a python list[int] (or similar),
+        # but torch tensors trigger ambiguous truth-value checks.
+        if hasattr(obj, "tolist"):
+            obj = obj.detach().cpu().tolist()
+        return args.sp.decode(obj).lower()
+
     for enc in encoder:
         i = i + 1
         batch_hyps = []
@@ -82,7 +102,7 @@ def evaluate_batch_ctc(args, model, batch, valid_len, split, inf, vocab,
 
         for best_ in best_combined:
             if args.bpe == True:
-                hyp = apply_lex(args.sp.decode(best_[0].tokens).lower(), vocab)
+                hyp = apply_lex(_sp_decode_tokens(best_[0].tokens), vocab)
             else:
                 hyp = apply_lex(re.sub(r"[#^$]+", "", best_.lower()), vocab)
             print(split, "BEAM_OUT_", i, ":", hyp)
