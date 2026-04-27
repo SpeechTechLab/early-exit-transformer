@@ -99,6 +99,7 @@ def load_glottal_feature_map(
     standardize=True,
     stats_in_path=None,
     stats_out_path=None,
+    utt_level_mean=False,
 ):
     feat_dim = None
     id_candidates = ["file_name", "utt_id", "ut_id", "id", "path"]
@@ -323,16 +324,20 @@ def load_glottal_feature_map(
         for uid in utt_ids:
             per_utt_matrix[uid] = _apply_standardization(per_utt_matrix[uid], mean, std).astype(np.float32)
 
-    feat_map = {
-        uid: torch.tensor(per_utt_matrix[uid].T, dtype=torch.float32)
-        for uid in utt_ids
-    }
+    if utt_level_mean:
+        # Collapse frame-level matrix -> utterance-level vector.
+        # This enables "one glottal vector per utterance", later repeated across time.
+        for uid in utt_ids:
+            per_utt_matrix[uid] = np.mean(per_utt_matrix[uid], axis=0, dtype=np.float32)
+        feat_map = {uid: torch.tensor(per_utt_matrix[uid], dtype=torch.float32) for uid in utt_ids}
+    else:
+        feat_map = {uid: torch.tensor(per_utt_matrix[uid].T, dtype=torch.float32) for uid in utt_ids}
 
     if duplicate_rows > 0:
         print(f"INFO: aggregated {duplicate_rows} duplicate frame rows in glottal CSV")
     print(
-        f"INFO: loaded frame-level glottal features for {len(feat_map)} utterances "
-        f"from {processed_rows:,} rows"
+        f"INFO: loaded {'utterance-mean' if utt_level_mean else 'frame-level'} glottal features "
+        f"for {len(feat_map)} utterances from {processed_rows:,} rows"
     )
     if standardize:
         print("INFO: standardized frame-level glottal features with per-dimension z-score")
@@ -517,6 +522,7 @@ class CollatePaddingFn(object):
                 standardize=getattr(args, "glottal_standardize", True),
                 stats_in_path=getattr(args, "glottal_norm_stats_in", None),
                 stats_out_path=getattr(args, "glottal_norm_stats_out", None),
+                utt_level_mean=getattr(args, "glottal_utt_mean", False),
             )
 
     def __call__(self, batch,
@@ -665,6 +671,7 @@ class CollateInferFn(object):
                 standardize=getattr(args, "glottal_standardize", True),
                 stats_in_path=getattr(args, "glottal_norm_stats_in", None),
                 stats_out_path=getattr(args, "glottal_norm_stats_out", None),
+                utt_level_mean=getattr(args, "glottal_utt_mean", False),
             )
 
     def __call__(self, batch,

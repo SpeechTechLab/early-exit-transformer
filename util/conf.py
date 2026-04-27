@@ -33,13 +33,18 @@ def get_parser():
     parser.add_argument(
         "--append_glottal_features",
         action="store_true",
-        help="Append per-utterance glottal features from CSV to the acoustic input features computed from waveform."
+        help="Append glottal features from CSV to the acoustic input features computed from waveform."
     )
     parser.add_argument(
         "--glottal_features_path",
         type=str,
         default=None,
-        help="Path to CSV containing per-utterance glottal features keyed by utterance/file id."
+        help="Path to CSV containing glottal features keyed by utterance/file id (frame-level or utterance-level)."
+    )
+    parser.add_argument(
+        "--glottal_utt_mean",
+        action="store_true",
+        help="If set and the glottal CSV is frame-level, average all frames per utterance into a single vector, then repeat over time and concatenate to MFCC/mel features."
     )
     parser.add_argument(
         "--glottal_drop_mfcc",
