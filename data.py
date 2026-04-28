@@ -1,9 +1,27 @@
 import torch
-import torchaudio
 import numpy as np
 import os
 
 from util.data_loader import CollatePaddingFn, CollateInferFn
+
+# ---- Audio backend safety (fix TorchCodec/FFmpeg issues) ----
+# Newer torchaudio versions may default to TorchCodec, which requires FFmpeg
+# shared libraries. In minimal/docker environments this often fails at runtime.
+#
+# We force torchaudio to avoid TorchCodec and prefer classic backends.
+os.environ.setdefault("TORCHAUDIO_USE_TORCHCODEC", "0")
+
+import torchaudio
+
+try:
+    # Prefer sox_io when available; otherwise soundfile is fine.
+    # (If neither is available, torchaudio will fall back to its defaults.)
+    torchaudio.set_audio_backend("sox_io")
+except Exception:
+    try:
+        torchaudio.set_audio_backend("soundfile")
+    except Exception:
+        pass
 
 
 class PrecomputedFeatureDataset(torch.utils.data.Dataset):

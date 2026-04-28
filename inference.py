@@ -298,7 +298,11 @@ def main():
 
     results = {}
 
-    for split in ["test-clean", "test-other"]:  # "dev-clean", "dev-other":
+    infer_splits = [s.strip() for s in str(getattr(args, "infer_splits", "") or "").split(",") if s.strip()]
+    if not infer_splits:
+        infer_splits = ["test-clean", "test-other"]
+
+    for split in infer_splits:  # e.g. "test-clean", "test-other", "train-clean-100"
         print(split)
 
         wer_stats = {i: {"refs": [], "hyps": []} for i in range(1, args.n_enc_exits + 1)}
