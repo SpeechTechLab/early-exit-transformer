@@ -25,6 +25,12 @@ def get_parser():
         help="Training split selector. 'all' uses 960h, '100h' uses train-clean-100 only."
     )
     parser.add_argument(
+        "--infer_splits",
+        type=str,
+        default="test-clean,test-other",
+        help="Comma-separated LibriSpeech split(s) to run inference on (e.g., 'test-clean,test-other' or 'train-clean-100')."
+    )
+    parser.add_argument(
         "--n_glottal_features",
         type=int,
         default=0,
