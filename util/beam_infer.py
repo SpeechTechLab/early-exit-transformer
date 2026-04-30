@@ -1,7 +1,7 @@
 import os
 import torch
 from dataclasses import dataclass
-from typing import List
+from typing import List, Any
 import torch.nn.functional as F
 try:
     from torchaudio.models.decoder import ctc_decoder, cuda_ctc_decoder
@@ -43,6 +43,7 @@ class BeamInference(object):
         self.args = args
         self.decoder = []
         self.cuda_decoder = None
+        self._has_cuda = bool(torch.cuda.is_available()) and str(getattr(args, "device", "")).startswith("cuda")
 
         # for bigger LM
         self.LM_WEIGHT = 1.0  # 3.23#1.0#3.23
@@ -55,6 +56,9 @@ class BeamInference(object):
         self.WORD_SCORE = -0.26
         self.N_BEST = 1
         '''
+
+        # Always have a greedy fallback (works on CPU, no external deps).
+        self.greedy_decoder = GreedyCTCDecoder()
 
         if ctc_decoder is None or cuda_ctc_decoder is None:
             self.greedy_decoder = GreedyCTCDecoder()
@@ -85,12 +89,15 @@ class BeamInference(object):
                 word_score=self.WORD_SCORE
             )
 
-        # lm="lm.bin"
-        # lm="4gram_small.arpa.lm"
-        self.cuda_decoder = cuda_ctc_decoder(
-            args.tokens, nbest=1, beam_size=args.beam_size, blank_skip_threshold=0.95)
-
-        self.greedy_decoder = GreedyCTCDecoder()
+        # CUDA beam decoder (optional). Only initialize if CUDA is available.
+        if self._has_cuda:
+            # lm="lm.bin"
+            # lm="4gram_small.arpa.lm"
+            self.cuda_decoder = cuda_ctc_decoder(
+                args.tokens, nbest=1, beam_size=args.beam_size, blank_skip_threshold=0.95
+            )
+        else:
+            self.cuda_decoder = None
 
 
     def beam_predict(self, model, input_sequence):
@@ -119,20 +126,42 @@ class BeamInference(object):
 
 
     def ctc_cuda_predict(self, emission, tokens=None):
-        if cuda_ctc_decoder is None:
-            raise RuntimeError(
-                "CUDA CTC decoder is unavailable. Install flashlight-text (and optional KenLM)."
-            ) from _DECODER_IMPORT_ERROR
+        # CPU-safe fallback: greedy decode, but return a structure compatible with
+        # downstream code (list over batch; each element is a list of hypotheses
+        # with a `.tokens` attribute).
+        if (not self._has_cuda) or (cuda_ctc_decoder is None):
+            return self._ctc_greedy_compat(emission)
+
         if tokens == None:
             tokens = self.args.tokens
         
         enc_len = torch.full(size=(emission.size(0),), fill_value=emission.size(
             1), dtype=torch.int32).to(self.args.device)
-        cuda_decoder = cuda_ctc_decoder(
-            tokens, nbest=1, beam_size=self.args.beam_size, blank_skip_threshold=0.95)
-        
+        cuda_decoder = self.cuda_decoder or cuda_ctc_decoder(
+            tokens, nbest=1, beam_size=self.args.beam_size, blank_skip_threshold=0.95
+        )
         results = cuda_decoder(emission, enc_len)
         return (results)
+
+    @dataclass
+    class _GreedyHyp:
+        tokens: Any
+
+    def _ctc_greedy_compat(self, emission: torch.Tensor):
+        """Greedy CTC decode with a return type compatible with cuda_ctc_decoder()."""
+        # Accept shapes:
+        # - [B, T, V]
+        # - [T, V] (treated as B=1)
+        if emission.dim() == 2:
+            emission = emission.unsqueeze(0)
+        if emission.dim() != 3:
+            raise ValueError(f"Unexpected emission shape for greedy CTC: {tuple(emission.shape)}")
+
+        out = []
+        for b in range(emission.size(0)):
+            idx = self.greedy_decoder(emission[b])  # list[int]
+            out.append([self._GreedyHyp(tokens=idx)])
+        return out
 
 
     def ctc_predict(self, emission, index=5):
