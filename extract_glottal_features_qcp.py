@@ -490,6 +490,14 @@ def _load_and_preprocess_audio(file_path):
     if len(x) < 32:
         return None, None
 
+    # Align with common pathology-speech preprocessing:
+    # - remove DC offset
+    # - amplitude normalize (peak)
+    x = x - float(np.mean(x))
+    peak = float(np.max(np.abs(x))) if x.size else 0.0
+    if peak > 0:
+        x = x / peak
+
     if skew(x, bias=False) < 0:
         x = -x
 
@@ -499,6 +507,197 @@ def _load_and_preprocess_audio(file_path):
         x = filtfilt(b_hp, a_hp, x)
 
     return x, fs
+
+
+def _voiced_segments_from_mask(voiced_mask: np.ndarray, fs: int, frame_shift: int, merge_gap_ms: float = 50.0):
+    """Convert a frame-level voiced mask into merged voiced segments (frame indices).
+
+    Mirrors the kind of V/UV segmentation used in classic PD papers:
+    adjacent voiced segments separated by small gaps are merged.
+    """
+    voiced_mask = np.asarray(voiced_mask).astype(bool)
+    if voiced_mask.size == 0:
+        return []
+
+    segments = []
+    in_seg = False
+    seg_start = 0
+    for i, v in enumerate(voiced_mask):
+        if v and not in_seg:
+            in_seg = True
+            seg_start = i
+        elif (not v) and in_seg:
+            in_seg = False
+            segments.append((seg_start, i))  # [start, end)
+    if in_seg:
+        segments.append((seg_start, int(voiced_mask.size)))
+
+    if not segments:
+        return []
+
+    max_gap_frames = int(round((merge_gap_ms / 1000.0) * fs / frame_shift))
+    if max_gap_frames <= 0:
+        return segments
+
+    merged = [segments[0]]
+    for s, e in segments[1:]:
+        ps, pe = merged[-1]
+        if s - pe <= max_gap_frames:
+            merged[-1] = (ps, e)
+        else:
+            merged.append((s, e))
+    return merged
+
+
+def _poly5_coeffs(y: np.ndarray):
+    """Return 6 coefficients for a 5th-order polynomial fit over normalized time."""
+    y = np.asarray(y, dtype=np.float64).ravel()
+    if y.size < 6 or not np.all(np.isfinite(y)):
+        return np.full(6, np.nan, dtype=np.float64)
+    t = np.linspace(0.0, 1.0, num=y.size, dtype=np.float64)
+    try:
+        return np.polyfit(t, y, deg=5).astype(np.float64)
+    except Exception:
+        return np.full(6, np.nan, dtype=np.float64)
+
+
+def _extract_disvoice_like_segment_features(
+    *,
+    f0_per_frame: np.ndarray,
+    energy_per_frame: np.ndarray,
+    voiced_mask: np.ndarray,
+    fs: int,
+    frame_shift: int,
+):
+    """Compute a DisVoice-inspired prosody/phonation summary at file-level.
+
+    This is *not* a full DisVoice reimplementation (which also models onsets, etc.).
+    It adds the closest comparable descriptors used in CzechPD_2024:
+    - duration of voiced segments
+    - 5th-order polynomial coefficients for F0 and energy contours per voiced segment
+    - first/second derivative of F0 (frame-level) summarized over voiced frames
+    """
+    f0_per_frame = np.asarray(f0_per_frame, dtype=np.float64).ravel()
+    energy_per_frame = np.asarray(energy_per_frame, dtype=np.float64).ravel()
+    voiced_mask = np.asarray(voiced_mask).astype(bool).ravel()
+
+    n = min(f0_per_frame.size, energy_per_frame.size, voiced_mask.size)
+    if n <= 0:
+        return {}
+
+    f0 = f0_per_frame[:n]
+    eng = energy_per_frame[:n]
+    vmask = voiced_mask[:n]
+
+    # F0 in semitones relative to utterance median for speaker normalization (classic PD practice).
+    f0_voiced = f0[vmask]
+    f0_med = float(np.median(f0_voiced[f0_voiced > 0])) if np.any(f0_voiced > 0) else np.nan
+    with np.errstate(divide="ignore", invalid="ignore"):
+        f0_st = 12.0 * np.log2(np.maximum(f0, 1e-9) / max(f0_med, 1e-9))
+    f0_st[~np.isfinite(f0_st)] = np.nan
+
+    # Frame-level F0 derivatives (voiced only)
+    df0 = np.r_[0.0, np.diff(f0)]
+    ddf0 = np.r_[0.0, np.diff(df0)]
+    df0_voiced = df0[vmask & np.isfinite(df0)]
+    ddf0_voiced = ddf0[vmask & np.isfinite(ddf0)]
+
+    out = {}
+    m, s, sk, ku, q25, q50, q75 = safe_stats(df0_voiced)
+    out.update(
+        {
+            "phon_df0_mean": m,
+            "phon_df0_std": s,
+            "phon_df0_skewness": sk,
+            "phon_df0_kurtosis": ku,
+            "phon_df0_q25": q25,
+            "phon_df0_q50": q50,
+            "phon_df0_q75": q75,
+        }
+    )
+    m, s, sk, ku, q25, q50, q75 = safe_stats(ddf0_voiced)
+    out.update(
+        {
+            "phon_ddf0_mean": m,
+            "phon_ddf0_std": s,
+            "phon_ddf0_skewness": sk,
+            "phon_ddf0_kurtosis": ku,
+            "phon_ddf0_q25": q25,
+            "phon_ddf0_q50": q50,
+            "phon_ddf0_q75": q75,
+        }
+    )
+
+    segments = _voiced_segments_from_mask(vmask, fs, frame_shift, merge_gap_ms=50.0)
+    if not segments:
+        # Still return the derivative stats computed above.
+        out["pros_n_segments"] = 0
+        return out
+
+    dur_s = []
+    f0_coeffs = []
+    e_coeffs = []
+
+    for s_idx, e_idx in segments:
+        seg_len = int(e_idx - s_idx)
+        if seg_len <= 0:
+            continue
+        dur_s.append((seg_len * frame_shift) / float(fs))
+
+        seg_f0 = f0_st[s_idx:e_idx]
+        seg_eng = np.log(np.maximum(eng[s_idx:e_idx], np.finfo(np.float64).eps))
+
+        # If a segment has NaNs, drop them but keep alignment by simple interpolation.
+        if np.any(~np.isfinite(seg_f0)):
+            good = np.isfinite(seg_f0)
+            if np.sum(good) >= 6:
+                seg_f0 = np.interp(np.arange(seg_f0.size), np.where(good)[0], seg_f0[good])
+            else:
+                seg_f0 = np.full(seg_len, np.nan, dtype=np.float64)
+
+        if np.any(~np.isfinite(seg_eng)):
+            good = np.isfinite(seg_eng)
+            if np.sum(good) >= 6:
+                seg_eng = np.interp(np.arange(seg_eng.size), np.where(good)[0], seg_eng[good])
+            else:
+                seg_eng = np.full(seg_len, np.nan, dtype=np.float64)
+
+        f0_coeffs.append(_poly5_coeffs(seg_f0))
+        e_coeffs.append(_poly5_coeffs(seg_eng))
+
+    dur_s = np.asarray(dur_s, dtype=np.float64)
+    f0_coeffs = np.asarray(f0_coeffs, dtype=np.float64)  # (n_seg, 6)
+    e_coeffs = np.asarray(e_coeffs, dtype=np.float64)  # (n_seg, 6)
+
+    out["pros_n_segments"] = int(dur_s.size)
+    m, s, sk, ku, q25, q50, q75 = safe_stats(dur_s)
+    out.update(
+        {
+            "pros_voiced_seg_dur_mean": m,
+            "pros_voiced_seg_dur_std": s,
+            "pros_voiced_seg_dur_skewness": sk,
+            "pros_voiced_seg_dur_kurtosis": ku,
+            "pros_voiced_seg_dur_q25": q25,
+            "pros_voiced_seg_dur_q50": q50,
+            "pros_voiced_seg_dur_q75": q75,
+        }
+    )
+
+    def _summarize_coeff_matrix(mat: np.ndarray, prefix: str):
+        if mat.size == 0:
+            for i in range(6):
+                out[f"{prefix}_c{i}_mean"] = np.nan
+                out[f"{prefix}_c{i}_std"] = np.nan
+            return
+        for i in range(6):
+            col = mat[:, i]
+            col = col[np.isfinite(col)]
+            out[f"{prefix}_c{i}_mean"] = float(np.mean(col)) if col.size else np.nan
+            out[f"{prefix}_c{i}_std"] = float(np.std(col, ddof=1)) if col.size > 1 else (0.0 if col.size == 1 else np.nan)
+
+    _summarize_coeff_matrix(f0_coeffs, "pros_f0_poly5")
+    _summarize_coeff_matrix(e_coeffs, "pros_energy_poly5")
+    return out
 
 
 def _extract_qcp_frame_features(x, fs, frame_length, frame_shift):
@@ -529,9 +728,12 @@ def _extract_qcp_frame_features(x, fs, frame_length, frame_shift):
     }
 
     features = {k: np.full(num_frames, np.nan, dtype=np.float64) for k in FRAME_FEATURE_KEYS}
+    # Simple per-frame energy for DisVoice-like prosody modeling
+    energy = np.full(num_frames, np.nan, dtype=np.float64)
 
     for i, frame in enumerate(frames):
         try:
+            energy[i] = float(np.mean(np.square(frame))) if frame.size else np.nan
             g_flow, _, residual = qcp(frame, fs, options)
             if g_flow is None or len(g_flow) == 0:
                 continue
@@ -568,6 +770,7 @@ def _extract_qcp_frame_features(x, fs, frame_length, frame_shift):
         "voiced_mask": voiced_mask,
         "frame_indices": frame_indices,
         "f0_per_frame": f0_per_frame,
+        "energy_per_frame": energy,
         "num_frames": num_frames,
     }
 
@@ -591,6 +794,8 @@ def extract_file_qcp(file_path):
 
     features = frame_data["features"]
     voiced_mask = frame_data["voiced_mask"]
+    f0_per_frame = frame_data["f0_per_frame"]
+    energy_per_frame = frame_data["energy_per_frame"]
 
     def voiced_clean(a):
         return a[voiced_mask]
@@ -609,6 +814,19 @@ def extract_file_qcp(file_path):
         row[f"{key}_q25"] = q25
         row[f"{key}_q50"] = q50
         row[f"{key}_q75"] = q75
+
+    # Add DisVoice-inspired prosody/phonation summaries (used in CzechPD_2024).
+    # This makes our CSV closer to how those papers parameterize voiced segments,
+    # while remaining compatible with the current "one-row-per-file" classifier.
+    row.update(
+        _extract_disvoice_like_segment_features(
+            f0_per_frame=f0_per_frame,
+            energy_per_frame=energy_per_frame,
+            voiced_mask=voiced_mask,
+            fs=fs,
+            frame_shift=frame_shift,
+        )
+    )
 
     # MFCC extraction disabled.
     # To restore it later, uncomment the block below.

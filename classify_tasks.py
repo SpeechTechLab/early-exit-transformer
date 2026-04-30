@@ -9,7 +9,7 @@ from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import Pipeline
-from sklearn.model_selection import StratifiedGroupKFold, GridSearchCV
+from sklearn.model_selection import StratifiedGroupKFold, GridSearchCV, LeaveOneGroupOut
 from sklearn.metrics import (
     accuracy_score,
     f1_score,
@@ -118,7 +118,19 @@ def save_explanatory_plots(summary_df: pd.DataFrame, out_dir: Path, task_name: s
         plt.close(fig)
 
 
-def evaluate_model_with_nested_cv(model_name, estimator, param_grid, X, y, groups, n_repeats=1, n_outer_splits=10, n_inner_splits=5, base_random_state=42):
+def evaluate_model_with_nested_cv(
+    model_name,
+    estimator,
+    param_grid,
+    X,
+    y,
+    groups,
+    n_repeats=1,
+    n_outer_splits=10,
+    n_inner_splits=5,
+    base_random_state=42,
+    outer_cv_mode: str = "sgkf",
+):
     metrics_template = {
         "accuracy": [],
         "balanced_acc": [],
@@ -136,10 +148,18 @@ def evaluate_model_with_nested_cv(model_name, estimator, param_grid, X, y, group
     for repeat in range(n_repeats):
         current_seed = base_random_state + repeat
 
-        outer_cv = StratifiedGroupKFold(n_splits=n_outer_splits, shuffle=True, random_state=current_seed)
+        outer_mode = str(outer_cv_mode or "sgkf").strip().lower()
+        if outer_mode in {"loso", "leaveonegroupout", "logo"}:
+            outer_cv = LeaveOneGroupOut()
+            outer_split_iter = outer_cv.split(X, y, groups)
+            outer_total = int(len(np.unique(groups)))
+        else:
+            outer_cv = StratifiedGroupKFold(n_splits=n_outer_splits, shuffle=True, random_state=current_seed)
+            outer_split_iter = outer_cv.split(X, y, groups)
+            outer_total = int(n_outer_splits)
         inner_cv = StratifiedGroupKFold(n_splits=n_inner_splits, shuffle=True, random_state=current_seed)
 
-        for fold, (train_idx, test_idx) in enumerate(outer_cv.split(X, y, groups), start=1):
+        for fold, (train_idx, test_idx) in enumerate(outer_split_iter, start=1):
             X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
             y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
             g_train, g_test = groups.iloc[train_idx], groups.iloc[test_idx]
@@ -207,7 +227,7 @@ def evaluate_model_with_nested_cv(model_name, estimator, param_grid, X, y, group
                 "speaker_recall": results_speaker["recall"][-1],
             })
 
-            print(f"{model_name} | Fold {fold}/{n_outer_splits} complete")
+            print(f"{model_name} | Fold {fold}/{outer_total} complete")
 
     return results_sample, results_speaker, pd.DataFrame(fold_records)
 
@@ -319,9 +339,10 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
     groups = data['speaker']
     
     # CONFIGURATION
-    N_REPEATS = 1
-    N_OUTER_SPLITS = 10
-    N_INNER_SPLITS = 5
+    # Allow CLI override via module-level globals (set in __main__).
+    N_REPEATS = int(globals().get("N_REPEATS", 1))
+    N_OUTER_SPLITS = int(globals().get("N_OUTER_SPLITS", 10))
+    N_INNER_SPLITS = int(globals().get("N_INNER_SPLITS", 5))
     BASE_RANDOM_STATE = 42
 
     feature_subsets = build_feature_subsets(X)
@@ -417,6 +438,7 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
                 n_outer_splits=N_OUTER_SPLITS,
                 n_inner_splits=N_INNER_SPLITS,
                 base_random_state=BASE_RANDOM_STATE,
+                outer_cv_mode=str(globals().get("OUTER_CV_MODE", "sgkf")),
             )
 
             summarize_metrics(f"{model_cfg['title']} [{subset_name}]", model_sample, model_speaker)
@@ -455,7 +477,29 @@ if __name__ == "__main__":
     import argparse as _argparse
     _parser = _argparse.ArgumentParser(description="Run classification on feature CSVs")
     _parser.add_argument("--csv", nargs="+", default=None, help="Specific CSV files to process (default: all features_*.csv)")
+    _parser.add_argument(
+        "--models",
+        type=str,
+        default=",".join(RUN_MODELS),
+        help="Comma-separated models to run: svm,rf,xgb (default matches script default).",
+    )
+    _parser.add_argument(
+        "--outer_cv",
+        type=str,
+        default="sgkf",
+        help="Outer CV mode: 'sgkf' (StratifiedGroupKFold) or 'loso' (Leave-One-Speaker-Out).",
+    )
+    _parser.add_argument("--outer_splits", type=int, default=10, help="Outer StratifiedGroupKFold splits (default: 10).")
+    _parser.add_argument("--inner_splits", type=int, default=5, help="Inner StratifiedGroupKFold splits for GridSearch (default: 5).")
+    _parser.add_argument("--repeats", type=int, default=1, help="Repeat nested CV with different seeds (default: 1).")
     _args = _parser.parse_args()
+
+    # Override global run config from CLI
+    _models = [m.strip().lower() for m in str(_args.models).split(",") if m.strip()]
+    if _models:
+        RUN_MODELS[:] = _models
+
+    globals()["OUTER_CV_MODE"] = str(_args.outer_cv).strip().lower()
 
     base_results_dir = Path("classification_results")
     base_results_dir.mkdir(parents=True, exist_ok=True)
@@ -470,6 +514,18 @@ if __name__ == "__main__":
         print("No feature CSV files found. Please run the MATLAB extraction script first.")
     else:
         for csv_file in csv_files:
+            # Patch nested-CV configuration for this run
+            # (kept as globals inside run_classification_for_task for minimal diff)
+            global_N_OUTER_SPLITS = int(_args.outer_splits)
+            global_N_INNER_SPLITS = int(_args.inner_splits)
+            global_N_REPEATS = int(_args.repeats)
+
+            # Monkey-patch via module globals used in run_classification_for_task
+            # (avoid refactoring the full file; keeps existing behavior as default)
+            globals()["N_OUTER_SPLITS"] = global_N_OUTER_SPLITS
+            globals()["N_INNER_SPLITS"] = global_N_INNER_SPLITS
+            globals()["N_REPEATS"] = global_N_REPEATS
+
             run_classification_for_task(csv_file, run_output_dir)
 
         # Run-level global exports for easy cross-task comparison

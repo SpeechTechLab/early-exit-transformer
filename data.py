@@ -73,22 +73,22 @@ def get_data_loader(args):
         split = getattr(args, "train_split", "all")
 
     try:
-            train_dataset1 = torchaudio.datasets.LIBRISPEECH(
-                "", url="train-clean-100", download=False
-            )
+        train_dataset1 = torchaudio.datasets.LIBRISPEECH(
+            "", url="train-clean-100", download=False
+        )
 
-            if split in ("100h", "train-clean-100"):
-                train_dataset = train_dataset1
-            else:
-                train_dataset2 = torchaudio.datasets.LIBRISPEECH(
-                    "", url="train-clean-360", download=False
-                )
-                train_dataset3 = torchaudio.datasets.LIBRISPEECH(
-                    "", url="train-other-500", download=False
-                )
-                train_dataset = torch.utils.data.ConcatDataset(
-                    [train_dataset1, train_dataset2, train_dataset3]
-                )
+        if split in ("100h", "train-clean-100"):
+            train_dataset = train_dataset1
+        else:
+            train_dataset2 = torchaudio.datasets.LIBRISPEECH(
+                "", url="train-clean-360", download=False
+            )
+            train_dataset3 = torchaudio.datasets.LIBRISPEECH(
+                "", url="train-other-500", download=False
+            )
+            train_dataset = torch.utils.data.ConcatDataset(
+                [train_dataset1, train_dataset2, train_dataset3]
+            )
     except RuntimeError as e:
         if "Dataset not found" not in str(e):
             raise
@@ -109,6 +109,19 @@ def get_data_loader(args):
             train_dataset = torch.utils.data.ConcatDataset(
                 [train_dataset1, train_dataset2, train_dataset3]
             )
+
+    # Optional debug/overfit mode: subset to a small number of utterances.
+    max_utts = int(getattr(args, "max_train_utts", 0) or 0)
+    if max_utts > 0 and len(train_dataset) > max_utts:
+        subset_seed = int(getattr(args, "subset_seed", 0) or 0)
+        if subset_seed != 0:
+            g = torch.Generator()
+            g.manual_seed(subset_seed)
+            idx = torch.randperm(len(train_dataset), generator=g)[:max_utts].tolist()
+        else:
+            idx = list(range(max_utts))
+        train_dataset = torch.utils.data.Subset(train_dataset, idx)
+        print(f"INFO: training subset enabled: {len(train_dataset)} utterances")
 
     collate_padding_fn = CollatePaddingFn(args=args)
     data_loader = torch.utils.data.DataLoader(train_dataset, 
@@ -142,6 +155,19 @@ def get_infer_data_loader(args, split=None, shuffle=None):
             )
 
         collate_infer_fn = CollateInferFn(args=args)
+        # Optional debug mode: subset inference to small number of utterances
+        max_utts = int(getattr(args, "max_infer_utts", 0) or 0)
+        if max_utts > 0 and len(train_dataset) > max_utts:
+            subset_seed = int(getattr(args, "subset_seed", 0) or 0)
+            if subset_seed != 0:
+                g = torch.Generator()
+                g.manual_seed(subset_seed)
+                idx = torch.randperm(len(train_dataset), generator=g)[:max_utts].tolist()
+            else:
+                idx = list(range(max_utts))
+            train_dataset = torch.utils.data.Subset(train_dataset, idx)
+            print(f"INFO: inference subset enabled: {len(train_dataset)} utterances")
+
         data_loader = torch.utils.data.DataLoader(
             train_dataset,
             pin_memory=False,

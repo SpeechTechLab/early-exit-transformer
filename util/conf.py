@@ -213,6 +213,35 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--max_train_utts",
+        type=int,
+        default=0,
+        help="""
+            If > 0, restrict training to at most this many utterances (debug/overfit mode).
+            Works for LibriSpeech waveform-based training (non-precomputed features).
+        """,
+    )
+
+    parser.add_argument(
+        "--max_infer_utts",
+        type=int,
+        default=0,
+        help="""
+            If > 0, restrict inference to at most this many utterances (debug mode).
+        """,
+    )
+
+    parser.add_argument(
+        "--subset_seed",
+        type=int,
+        default=0,
+        help="""
+            Seed used when subsampling utterances with --max_train_utts/--max_infer_utts.
+            0 means deterministic "first N" selection.
+        """,
+    )
+
+    parser.add_argument(
         "--n_epochs",
         type=int,
         default=10000,
