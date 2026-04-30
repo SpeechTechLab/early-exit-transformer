@@ -26,7 +26,9 @@ class GreedyCTCDecoder(torch.nn.Module):
         """
         indices = torch.argmax(emission, dim=-1)  # [num_seq,]
         indices = torch.unique_consecutive(indices, dim=-1)
-        indices = [i for i in indices if i != self.blank]
+        # Convert to a plain Python list[int] (SentencePiece expects ints, not 0-d tensors).
+        indices = indices.detach().cpu().tolist()
+        indices = [int(i) for i in indices if int(i) != int(self.blank)]
         return indices
 
 
