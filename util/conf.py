@@ -39,7 +39,14 @@ def get_parser():
     parser.add_argument(
         "--append_glottal_features",
         action="store_true",
-        help="Append glottal features from CSV to the acoustic input features computed from waveform."
+        help="Append glottal features to mel frames: from CSV (--glottal_features_path) or from waveform (--glottal_from_waveform)."
+    )
+    parser.add_argument(
+        "--glottal_from_waveform",
+        action="store_true",
+        help="Compute QCP glottal frames from raw audio in the collate path (aligned to mel length via hop/STFT settings). "
+        "Does not use --glottal_features_path; fixed channel count matches FRAME_FEATURE_KEYS (10). "
+        "Optional --glottal_norm_stats_in still applies z-score when --glottal_standardize is on.",
     )
     parser.add_argument(
         "--glottal_features_path",
@@ -597,26 +604,21 @@ def get_parser():
 
     return parser
 
-def get_args():
-    parser = get_parser()
-    args = parser.parse_args()
 
+def finalize_configured_args(args):
+    """Apply device, tokenizer, and index settings after CLI parse (shared by get_args and smoke tools)."""
     conf = vars(args)
-
     conf["decoder_mode"] = args.decoder_mode.lower()
-
     conf["device"] = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
     conf["src_pad_idx"] = 0
     conf["trg_pad_idx"] = 30
     conf["trg_sos_idx"] = 1
     conf["trg_eos_idx"] = 31
     conf["enc_voc_size"] = 32
     conf["dec_voc_size"] = 32
-
-    if args.bpe == True:
+    if args.bpe is True:
         conf["sp"] = spm.SentencePieceProcessor()
-        conf["sp"].load('sentencepiece/build/libri.bpe-256.model')
+        conf["sp"].load("sentencepiece/build/libri.bpe-256.model")
         conf["src_pad_idx"] = 0
         conf["trg_pad_idx"] = 126
         conf["trg_sos_idx"] = 1
@@ -625,7 +627,10 @@ def get_args():
         conf["dec_voc_size"] = conf["sp"].get_piece_size()
         conf["lexicon"] = "sentencepiece/build/librispeech-bpe-256.lex"
         conf["tokens"] = "sentencepiece/build/librispeech-bpe-256.tok"
- 
-    conf["inf"] = float('inf')
-
+    conf["inf"] = float("inf")
     return args
+
+
+def get_args():
+    args = get_parser().parse_args()
+    return finalize_configured_args(args)

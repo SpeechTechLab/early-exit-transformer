@@ -350,6 +350,69 @@ def infer_glottal_feature_dim(csv_path, drop_mfcc=True):
     return feat_dim
 
 
+def compute_glottal_features_from_waveform(
+    waveform,
+    sample_rate,
+    mel_time_steps,
+    args,
+    *,
+    norm_mean=None,
+    norm_std=None,
+):
+    """Compute QCP glottal frames from the same raw waveform used for mels, then align to mel time steps.
+
+    Framing uses a 50 ms analysis window and ``args.hop_length`` as frame shift so the QCP frame grid
+    tracks the STFT hop used for spectrograms; lengths are matched to ``mel_time_steps`` with linear
+    interpolation (same idea as the CSV glottal branch).
+
+    ``waveform`` is expected as ``[1, T]`` or ``[T]``. ``norm_mean`` / ``norm_std`` are optional
+    per-channel vectors (length ``QCP_FRAME_FEATURE_DIM``), e.g. from ``glottal_norm_stats_in``.
+    """
+    from extract_glottal_features_qcp import (
+        QCP_FRAME_FEATURE_DIM,
+        glottal_frame_tensor_from_waveform_numpy,
+    )
+
+    device = waveform.device
+    w = waveform.detach().float().cpu()
+    if w.dim() == 2:
+        w = w.mean(dim=0)
+    else:
+        w = w.reshape(-1)
+
+    sr = int(sample_rate)
+    hop = int(getattr(args, "hop_length", max(1, int(round(0.01 * sr)))))
+    frame_length = int(round(0.050 * sr))
+
+    g = glottal_frame_tensor_from_waveform_numpy(
+        w.numpy().astype(np.float64),
+        sr,
+        frame_length,
+        hop,
+        preprocess=True,
+    )
+
+    if mel_time_steps <= 0:
+        return torch.zeros(QCP_FRAME_FEATURE_DIM, 0, dtype=torch.float32, device=device)
+
+    if g.size(1) == 0:
+        g = torch.zeros(QCP_FRAME_FEATURE_DIM, mel_time_steps, dtype=torch.float32)
+    elif g.size(1) != mel_time_steps:
+        g = F.interpolate(
+            g.unsqueeze(0),
+            size=mel_time_steps,
+            mode="linear",
+            align_corners=False,
+        ).squeeze(0)
+
+    if norm_mean is not None and norm_std is not None:
+        m = torch.as_tensor(norm_mean, dtype=torch.float32, device=g.device).view(-1, 1)
+        s = torch.as_tensor(norm_std, dtype=torch.float32, device=g.device).view(-1, 1)
+        g = (g - m) / s
+
+    return g.to(device=device, dtype=torch.float32)
+
+
 def spec_transform(waveform, args):
     spec_t = T.Spectrogram(n_fft=args.n_fft * 2,
                            hop_length=args.hop_length,
@@ -509,21 +572,39 @@ class CollatePaddingFn(object):
         self.args = args
         self.glottal_feat_map = None
         self.glottal_dim = 0
+        self._glottal_norm_mean = None
+        self._glottal_norm_std = None
         self._missing_glottal_warned = False
+        # glottal_missing_count: utterances that used a zero glottal tensor (CSV id not in map).
+        # glottal_found_count: CSV hit, or every utterance when glottal_from_waveform.
         self.glottal_missing_count = 0
         self.glottal_found_count = 0
 
         if getattr(args, "append_glottal_features", False):
-            if not args.glottal_features_path:
-                raise ValueError("--glottal_features_path is required when --append_glottal_features is set")
-            self.glottal_feat_map, self.glottal_dim = load_glottal_feature_map(
-                args.glottal_features_path,
-                drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
-                standardize=getattr(args, "glottal_standardize", True),
-                stats_in_path=getattr(args, "glottal_norm_stats_in", None),
-                stats_out_path=getattr(args, "glottal_norm_stats_out", None),
-                utt_level_mean=getattr(args, "glottal_utt_mean", False),
-            )
+            if getattr(args, "glottal_from_waveform", False):
+                from extract_glottal_features_qcp import QCP_FRAME_FEATURE_DIM
+
+                self.glottal_dim = QCP_FRAME_FEATURE_DIM
+                self.glottal_feat_map = None
+                stats_in = getattr(args, "glottal_norm_stats_in", None)
+                if getattr(args, "glottal_standardize", True) and stats_in:
+                    self._glottal_norm_mean, self._glottal_norm_std = _load_standardization_stats(
+                        stats_in, self.glottal_dim
+                    )
+            else:
+                if not args.glottal_features_path:
+                    raise ValueError(
+                        "--glottal_features_path is required when --append_glottal_features is set "
+                        "(unless --glottal_from_waveform is set)"
+                    )
+                self.glottal_feat_map, self.glottal_dim = load_glottal_feature_map(
+                    args.glottal_features_path,
+                    drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
+                    standardize=getattr(args, "glottal_standardize", True),
+                    stats_in_path=getattr(args, "glottal_norm_stats_in", None),
+                    stats_out_path=getattr(args, "glottal_norm_stats_out", None),
+                    utt_level_mean=getattr(args, "glottal_utt_mean", False),
+                )
 
     def __call__(self, batch,
                  SOS_token=None, EOS_token=None, PAD_token=None):
@@ -567,6 +648,7 @@ class CollatePaddingFn(object):
             for sample in c_batch:
                 waveform, smp_freq, label, spk_id = sample[:4]
                 ut_id = _extract_utt_id(sample)
+                smp_freq = int(smp_freq)
                 label = re.sub(r"<unk>|\[ unclear \]", "", label)
                 label = re.sub(r"[#^$?:;.!\[\]]+", "", label)
 
@@ -584,37 +666,49 @@ class CollatePaddingFn(object):
                         spec = spec.squeeze(0)
 
                     if getattr(self.args, "append_glottal_features", False):
-                        uid = _normalize_utt_id(ut_id)
-                        g = self.glottal_feat_map.get(uid)
-                        if g is None:
-                            g_rep = torch.zeros(self.glottal_dim, spec.size(1), dtype=torch.float32)
-                            self.glottal_missing_count += 1
-                            if not self._missing_glottal_warned:
-                                print(f"WARNING: missing glottal features for utterance '{uid}'. Using zeros.")
-                                self._missing_glottal_warned = True
-                        else:
+                        if getattr(self.args, "glottal_from_waveform", False):
+                            g_rep = compute_glottal_features_from_waveform(
+                                waveform,
+                                smp_freq,
+                                spec.size(1),
+                                self.args,
+                                norm_mean=self._glottal_norm_mean,
+                                norm_std=self._glottal_norm_std,
+                            )
+                            g_rep = g_rep.to(spec.device, dtype=spec.dtype)
                             self.glottal_found_count += 1
-                            g = g.to(spec.device)
-                            if g.dim() == 1:
-                                g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
-                            elif g.dim() == 2:
-                                if g.size(1) == spec.size(1):
-                                    g_rep = g
+                        else:
+                            uid = _normalize_utt_id(ut_id)
+                            g = self.glottal_feat_map.get(uid)
+                            if g is None:
+                                g_rep = torch.zeros(self.glottal_dim, spec.size(1), dtype=torch.float32)
+                                self.glottal_missing_count += 1
+                                if not self._missing_glottal_warned:
+                                    print(f"WARNING: missing glottal features for utterance '{uid}'. Using zeros.")
+                                    self._missing_glottal_warned = True
+                            else:
+                                self.glottal_found_count += 1
+                                g = g.to(spec.device)
+                                if g.dim() == 1:
+                                    g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
+                                elif g.dim() == 2:
+                                    if g.size(1) == spec.size(1):
+                                        g_rep = g
+                                    else:
+                                        g_rep = F.interpolate(
+                                            g.unsqueeze(0),
+                                            size=spec.size(1),
+                                            mode="linear",
+                                            align_corners=False,
+                                        ).squeeze(0)
                                 else:
+                                    g = g.reshape(self.glottal_dim, -1)
                                     g_rep = F.interpolate(
                                         g.unsqueeze(0),
                                         size=spec.size(1),
                                         mode="linear",
                                         align_corners=False,
                                     ).squeeze(0)
-                            else:
-                                g = g.reshape(self.glottal_dim, -1)
-                                g_rep = F.interpolate(
-                                    g.unsqueeze(0),
-                                    size=spec.size(1),
-                                    mode="linear",
-                                    align_corners=False,
-                                ).squeeze(0)
                         spec = torch.cat([spec, g_rep], dim=0)
 
                     if spec.dim() == 2:
@@ -658,21 +752,39 @@ class CollateInferFn(object):
         self.args = args
         self.glottal_feat_map = None
         self.glottal_dim = 0
+        self._glottal_norm_mean = None
+        self._glottal_norm_std = None
         self._missing_glottal_warned = False
+        # glottal_missing_count: utterances that used a zero glottal tensor (CSV id not in map).
+        # glottal_found_count: CSV hit, or every utterance when glottal_from_waveform.
         self.glottal_missing_count = 0
         self.glottal_found_count = 0
 
         if getattr(args, "append_glottal_features", False):
-            if not args.glottal_features_path:
-                raise ValueError("--glottal_features_path is required when --append_glottal_features is set")
-            self.glottal_feat_map, self.glottal_dim = load_glottal_feature_map(
-                args.glottal_features_path,
-                drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
-                standardize=getattr(args, "glottal_standardize", True),
-                stats_in_path=getattr(args, "glottal_norm_stats_in", None),
-                stats_out_path=getattr(args, "glottal_norm_stats_out", None),
-                utt_level_mean=getattr(args, "glottal_utt_mean", False),
-            )
+            if getattr(args, "glottal_from_waveform", False):
+                from extract_glottal_features_qcp import QCP_FRAME_FEATURE_DIM
+
+                self.glottal_dim = QCP_FRAME_FEATURE_DIM
+                self.glottal_feat_map = None
+                stats_in = getattr(args, "glottal_norm_stats_in", None)
+                if getattr(args, "glottal_standardize", True) and stats_in:
+                    self._glottal_norm_mean, self._glottal_norm_std = _load_standardization_stats(
+                        stats_in, self.glottal_dim
+                    )
+            else:
+                if not args.glottal_features_path:
+                    raise ValueError(
+                        "--glottal_features_path is required when --append_glottal_features is set "
+                        "(unless --glottal_from_waveform is set)"
+                    )
+                self.glottal_feat_map, self.glottal_dim = load_glottal_feature_map(
+                    args.glottal_features_path,
+                    drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
+                    standardize=getattr(args, "glottal_standardize", True),
+                    stats_in_path=getattr(args, "glottal_norm_stats_in", None),
+                    stats_out_path=getattr(args, "glottal_norm_stats_out", None),
+                    utt_level_mean=getattr(args, "glottal_utt_mean", False),
+                )
 
     def __call__(self, batch,
                  SOS_token=None, EOS_token=None, PAD_token=None):
@@ -689,6 +801,7 @@ class CollateInferFn(object):
         for sample in batch:
             waveform, smp_freq, label, spk_id = sample[:4]
             ut_id = _extract_utt_id(sample)
+            smp_freq = int(smp_freq)
             label = re.sub(r"[#^$,?:;.!]+|<unk>", "", label)
 
             if "ignore_time_segment_in_scoring" in label:
@@ -700,37 +813,49 @@ class CollateInferFn(object):
                 spec = spec.squeeze(0)
 
             if getattr(self.args, "append_glottal_features", False):
-                uid = _normalize_utt_id(ut_id)
-                g = self.glottal_feat_map.get(uid)
-                if g is None:
-                    g_rep = torch.zeros(self.glottal_dim, spec.size(1), dtype=torch.float32)
-                    self.glottal_missing_count += 1
-                    if not self._missing_glottal_warned:
-                        print(f"WARNING: missing glottal features for utterance '{uid}'. Using zeros.")
-                        self._missing_glottal_warned = True
-                else:
+                if getattr(self.args, "glottal_from_waveform", False):
+                    g_rep = compute_glottal_features_from_waveform(
+                        waveform,
+                        smp_freq,
+                        spec.size(1),
+                        self.args,
+                        norm_mean=self._glottal_norm_mean,
+                        norm_std=self._glottal_norm_std,
+                    )
+                    g_rep = g_rep.to(spec.device, dtype=spec.dtype)
                     self.glottal_found_count += 1
-                    g = g.to(spec.device)
-                    if g.dim() == 1:
-                        g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
-                    elif g.dim() == 2:
-                        if g.size(1) == spec.size(1):
-                            g_rep = g
+                else:
+                    uid = _normalize_utt_id(ut_id)
+                    g = self.glottal_feat_map.get(uid)
+                    if g is None:
+                        g_rep = torch.zeros(self.glottal_dim, spec.size(1), dtype=torch.float32)
+                        self.glottal_missing_count += 1
+                        if not self._missing_glottal_warned:
+                            print(f"WARNING: missing glottal features for utterance '{uid}'. Using zeros.")
+                            self._missing_glottal_warned = True
+                    else:
+                        self.glottal_found_count += 1
+                        g = g.to(spec.device)
+                        if g.dim() == 1:
+                            g_rep = g.unsqueeze(1).repeat(1, spec.size(1))
+                        elif g.dim() == 2:
+                            if g.size(1) == spec.size(1):
+                                g_rep = g
+                            else:
+                                g_rep = F.interpolate(
+                                    g.unsqueeze(0),
+                                    size=spec.size(1),
+                                    mode="linear",
+                                    align_corners=False,
+                                ).squeeze(0)
                         else:
+                            g = g.reshape(self.glottal_dim, -1)
                             g_rep = F.interpolate(
                                 g.unsqueeze(0),
                                 size=spec.size(1),
                                 mode="linear",
                                 align_corners=False,
                             ).squeeze(0)
-                    else:
-                        g = g.reshape(self.glottal_dim, -1)
-                        g_rep = F.interpolate(
-                            g.unsqueeze(0),
-                            size=spec.size(1),
-                            mode="linear",
-                            align_corners=False,
-                        ).squeeze(0)
                 spec = torch.cat([spec, g_rep], dim=0)
 
             t_source += [spec.size(1)]

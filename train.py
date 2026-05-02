@@ -96,11 +96,21 @@ def train(args, model, iterator, optimizer, loss_fn, ctc_loss):
     if getattr(args, "append_glottal_features", False) and hasattr(iterator, "collate_fn"):
         collate_fn = iterator.collate_fn
         found = getattr(collate_fn, "glottal_found_count", 0)
-        missing = getattr(collate_fn, "glottal_missing_count", 0)
-        total = found + missing
+        zero_fill = getattr(collate_fn, "glottal_missing_count", 0)
+        total = found + zero_fill
         if total > 0:
-            cov = 100.0 * found / total
-            print(f"[Train glottal coverage: {found}/{total} ({cov:.2f}%)]")
+            if getattr(args, "glottal_from_waveform", False):
+                print(
+                    f"[Train glottal: {found} utterances with QCP-from-waveform; "
+                    f"zero-filled N/A (glottal_from_waveform)]"
+                )
+            else:
+                zpct = 100.0 * zero_fill / total
+                print(
+                    f"[Train glottal: {found} utterances used CSV glottal; "
+                    f"{zero_fill} utterances had all-zero glottal (id missing from CSV; "
+                    f"{zpct:.2f}% of {total})]"
+                )
         # Reset counters so each epoch reports its own coverage.
         if hasattr(collate_fn, "glottal_found_count"):
             collate_fn.glottal_found_count = 0
@@ -194,19 +204,26 @@ def main():
             )
         input_features_length = args.n_glottal_features
     elif args.append_glottal_features:
-        if not args.glottal_features_path:
-            raise ValueError(
-                "When --append_glottal_features is set, --glottal_features_path must be provided"
-            )
+        if getattr(args, "glottal_from_waveform", False):
+            from extract_glottal_features_qcp import QCP_FRAME_FEATURE_DIM
 
-        if args.n_glottal_features > 0:
-            glottal_dim = args.n_glottal_features
-        else:
-            glottal_dim = infer_glottal_feature_dim(
-                args.glottal_features_path,
-                drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
-            )
+            glottal_dim = args.n_glottal_features if args.n_glottal_features > 0 else QCP_FRAME_FEATURE_DIM
             args.n_glottal_features = glottal_dim
+        else:
+            if not args.glottal_features_path:
+                raise ValueError(
+                    "When --append_glottal_features is set, --glottal_features_path must be provided "
+                    "(unless --glottal_from_waveform is set)"
+                )
+
+            if args.n_glottal_features > 0:
+                glottal_dim = args.n_glottal_features
+            else:
+                glottal_dim = infer_glottal_feature_dim(
+                    args.glottal_features_path,
+                    drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
+                )
+                args.n_glottal_features = glottal_dim
 
         input_features_length = args.n_mels + glottal_dim
 

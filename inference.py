@@ -162,18 +162,25 @@ def main():
             )
         input_features_length = args.n_glottal_features
     elif args.append_glottal_features:
-        if not args.glottal_features_path:
-            raise ValueError(
-                "When --append_glottal_features is set, --glottal_features_path must be provided"
-            )
-        if args.n_glottal_features > 0:
-            glottal_dim = args.n_glottal_features
-        else:
-            glottal_dim = infer_glottal_feature_dim(
-                args.glottal_features_path,
-                drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
-            )
+        if getattr(args, "glottal_from_waveform", False):
+            from extract_glottal_features_qcp import QCP_FRAME_FEATURE_DIM
+
+            glottal_dim = args.n_glottal_features if args.n_glottal_features > 0 else QCP_FRAME_FEATURE_DIM
             args.n_glottal_features = glottal_dim
+        else:
+            if not args.glottal_features_path:
+                raise ValueError(
+                    "When --append_glottal_features is set, --glottal_features_path must be provided "
+                    "(unless --glottal_from_waveform is set)"
+                )
+            if args.n_glottal_features > 0:
+                glottal_dim = args.n_glottal_features
+            else:
+                glottal_dim = infer_glottal_feature_dim(
+                    args.glottal_features_path,
+                    drop_mfcc=getattr(args, "glottal_drop_mfcc", False),
+                )
+                args.n_glottal_features = glottal_dim
         input_features_length = args.n_mels + glottal_dim
 
     #
@@ -319,16 +326,29 @@ def main():
         if getattr(args, "append_glottal_features", False) and hasattr(data_loader, "collate_fn"):
             collate_fn = data_loader.collate_fn
             found = getattr(collate_fn, "glottal_found_count", 0)
-            missing = getattr(collate_fn, "glottal_missing_count", 0)
-            total = found + missing
+            zero_fill = getattr(collate_fn, "glottal_missing_count", 0)
+            total = found + zero_fill
             if total > 0:
-                cov = 100.0 * found / total
-                print(f"[Glottal coverage: {found}/{total} ({cov:.2f}%)]")
+                if getattr(args, "glottal_from_waveform", False):
+                    print(
+                        f"[Infer glottal ({split}): {found} utterances with QCP-from-waveform; "
+                        f"zero-filled N/A (glottal_from_waveform)]"
+                    )
+                else:
+                    zpct = 100.0 * zero_fill / total
+                    print(
+                        f"[Infer glottal ({split}): {found} utterances used CSV glottal; "
+                        f"{zero_fill} utterances had all-zero glottal (id missing from CSV; "
+                        f"{zpct:.2f}% of {total})]"
+                    )
             else:
                 if getattr(args, "n_workers", 0) > 0:
-                    print("[Glottal coverage unavailable with n_workers>0; rerun with --n_workers 0 for exact counts]")
+                    print(
+                        "[Infer glottal: counts unavailable with n_workers>0; "
+                        "rerun with --n_workers 0 for zero-fill vs CSV stats]"
+                    )
                 else:
-                    print("[Glottal coverage: no items counted]")
+                    print("[Infer glottal: no items counted on collate_fn]")
 
         _print_wer_table(split, wer_stats, args.n_enc_exits, results)
 

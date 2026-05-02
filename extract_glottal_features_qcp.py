@@ -5,6 +5,7 @@ from pathlib import Path
 import librosa
 import numpy as np
 import pandas as pd
+import torch
 from scipy import signal
 from scipy.fft import fft
 from scipy.linalg import toeplitz
@@ -481,18 +482,21 @@ FRAME_FEATURE_KEYS = (
     "RES_LEN_RATIO",
 )
 
+QCP_FRAME_FEATURE_DIM = len(FRAME_FEATURE_KEYS)
 
-def _load_and_preprocess_audio(file_path):
-    x, fs = sf.read(file_path)
+
+def preprocess_waveform_numpy_like_qcp(x, fs):
+    """In-memory preprocessing aligned with `_load_and_preprocess_audio` after decoding.
+
+    Returns ``None`` if the signal is too short for analysis.
+    """
+    x = np.asarray(x, dtype=np.float64)
     if x.ndim > 1:
         x = np.mean(x, axis=1)
-    x = x.astype(np.float64).ravel()
+    x = x.ravel()
     if len(x) < 32:
-        return None, None
+        return None
 
-    # Align with common pathology-speech preprocessing:
-    # - remove DC offset
-    # - amplitude normalize (peak)
     x = x - float(np.mean(x))
     peak = float(np.max(np.abs(x))) if x.size else 0.0
     if peak > 0:
@@ -506,7 +510,45 @@ def _load_and_preprocess_audio(file_path):
         b_hp, a_hp = butter(2, hp_cut, btype="high")
         x = filtfilt(b_hp, a_hp, x)
 
+    return x
+
+
+def _load_and_preprocess_audio(file_path):
+    x, fs = sf.read(file_path)
+    x = preprocess_waveform_numpy_like_qcp(x, fs)
+    if x is None:
+        return None, None
     return x, fs
+
+
+def glottal_frame_tensor_from_waveform_numpy(
+    x,
+    fs,
+    frame_length,
+    frame_shift,
+    *,
+    preprocess=True,
+):
+    """Run QCP frame extraction and stack ``FRAME_FEATURE_KEYS`` into ``[C, T]`` float32.
+
+    NaNs are replaced with 0 for downstream neural use.
+    """
+    if preprocess:
+        x = preprocess_waveform_numpy_like_qcp(x, fs)
+        if x is None:
+            return torch.zeros(QCP_FRAME_FEATURE_DIM, 0, dtype=torch.float32)
+
+    fd = _extract_qcp_frame_features(x, fs, frame_length, frame_shift)
+    if fd is None:
+        return torch.zeros(QCP_FRAME_FEATURE_DIM, 0, dtype=torch.float32)
+
+    feats = fd["features"]
+    rows = []
+    for k in FRAME_FEATURE_KEYS:
+        v = np.asarray(feats[k], dtype=np.float64)
+        rows.append(np.nan_to_num(v, nan=0.0))
+    arr = np.stack(rows, axis=0).astype(np.float32)
+    return torch.from_numpy(arr)
 
 
 def _voiced_segments_from_mask(voiced_mask: np.ndarray, fs: int, frame_shift: int, merge_gap_ms: float = 50.0):
