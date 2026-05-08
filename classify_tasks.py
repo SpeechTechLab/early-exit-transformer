@@ -62,6 +62,46 @@ def summarize_metrics(title: str, results_sample: dict, results_speaker: dict):
         print(f"{metric:<14} | {mean_samp:.4f} ± {std_samp:.4f}      | {mean_spk:.4f} ± {std_spk:.4f}")
 
 
+def _sens_spec_from_labels(y_true: np.ndarray, y_pred: np.ndarray) -> Tuple[float, float]:
+    """Return (sensitivity, specificity) for binary labels where positive class is 1."""
+    y_true = np.asarray(y_true).astype(int)
+    y_pred = np.asarray(y_pred).astype(int)
+    tp = int(np.sum((y_true == 1) & (y_pred == 1)))
+    fn = int(np.sum((y_true == 1) & (y_pred == 0)))
+    tn = int(np.sum((y_true == 0) & (y_pred == 0)))
+    fp = int(np.sum((y_true == 0) & (y_pred == 1)))
+    sens = tp / (tp + fn) if (tp + fn) > 0 else float("nan")
+    spec = tn / (tn + fp) if (tn + fp) > 0 else float("nan")
+    return float(sens), float(spec)
+
+
+def _select_threshold_max_spec_at_min_sens(
+    y_true: np.ndarray, y_score: np.ndarray, min_sens: float
+) -> float:
+    """
+    Select threshold that maximizes specificity subject to sensitivity >= min_sens.
+    If no threshold meets the constraint, returns 1.0 (predict all negatives).
+    """
+    y_true = np.asarray(y_true).astype(int)
+    y_score = np.asarray(y_score).astype(float)
+    uniq = np.unique(y_score[~np.isnan(y_score)])
+    if uniq.size == 0:
+        return 0.5
+    # Consider thresholds from high -> low (more conservative -> more sensitive)
+    thresholds = np.r_[uniq, 1.0]
+    best_thr = 1.0
+    best_spec = -1.0
+    for thr in sorted(thresholds, reverse=True):
+        y_pred = (y_score >= thr).astype(int)
+        sens, spec = _sens_spec_from_labels(y_true, y_pred)
+        if np.isnan(sens) or np.isnan(spec):
+            continue
+        if sens >= float(min_sens) and spec > best_spec:
+            best_spec = spec
+            best_thr = float(thr)
+    return float(best_thr)
+
+
 def compute_metrics_summary_row(results_sample: dict, results_speaker: dict):
     row = {}
     for metric in results_sample.keys():
@@ -145,6 +185,16 @@ def evaluate_model_with_nested_cv(
     results_speaker = {k: [] for k in metrics_template}
     fold_records = []
 
+    # Optional "paper-style" speaker metrics (threshold tuned to hit min sensitivity).
+    paper_min_sens = globals().get("PAPER_MIN_SENS", None)
+    results_speaker_paper = None
+    if paper_min_sens is not None:
+        results_speaker_paper = {
+            "f1": [],
+            "sensitivity": [],
+            "specificity": [],
+        }
+
     for repeat in range(n_repeats):
         current_seed = base_random_state + repeat
 
@@ -207,6 +257,40 @@ def evaluate_model_with_nested_cv(
                 results_speaker["auc"].append(np.nan)
                 results_speaker["pr_auc"].append(np.nan)
 
+            paper_thr = np.nan
+            if results_speaker_paper is not None:
+                # Inner-CV threshold selection on speaker-aggregated validation predictions.
+                inner_y_all = []
+                inner_p_all = []
+                inner_g_all = []
+                for inner_train_idx, inner_val_idx in inner_cv.split(X_train, y_train, g_train):
+                    X_tr, X_val = X_train.iloc[inner_train_idx], X_train.iloc[inner_val_idx]
+                    y_tr, y_val = y_train.iloc[inner_train_idx], y_train.iloc[inner_val_idx]
+                    g_val = g_train.iloc[inner_val_idx]
+
+                    m = grid_search.best_estimator_
+                    m.fit(X_tr, y_tr)
+                    p_val = m.predict_proba(X_val)[:, 1]
+                    inner_y_all.append(y_val.to_numpy())
+                    inner_p_all.append(p_val)
+                    inner_g_all.append(g_val.to_numpy())
+
+                inner_y = np.concatenate(inner_y_all) if inner_y_all else np.array([], dtype=int)
+                inner_p = np.concatenate(inner_p_all) if inner_p_all else np.array([], dtype=float)
+                inner_g = np.concatenate(inner_g_all) if inner_g_all else np.array([], dtype=object)
+
+                if inner_y.size > 0:
+                    inner_y_spk, inner_p_spk, _ = aggregate_mean_by_group(inner_y, inner_p, inner_g)
+                    paper_thr = _select_threshold_max_spec_at_min_sens(inner_y_spk, inner_p_spk, float(paper_min_sens))
+                else:
+                    paper_thr = 0.5
+
+                y_pred_spk_paper = (y_proba_spk >= paper_thr).astype(int)
+                sens, spec = _sens_spec_from_labels(y_test_spk, y_pred_spk_paper)
+                results_speaker_paper["sensitivity"].append(sens)
+                results_speaker_paper["specificity"].append(spec)
+                results_speaker_paper["f1"].append(f1_score(y_test_spk, y_pred_spk_paper, zero_division=0))
+
             fold_records.append({
                 "model_name": model_name,
                 "repeat": repeat + 1,
@@ -225,9 +309,21 @@ def evaluate_model_with_nested_cv(
                 "speaker_pr_auc": results_speaker["pr_auc"][-1],
                 "speaker_precision": results_speaker["precision"][-1],
                 "speaker_recall": results_speaker["recall"][-1],
+                "paper_min_sens": paper_min_sens if results_speaker_paper is not None else np.nan,
+                "paper_threshold": paper_thr,
+                "paper_speaker_sensitivity": results_speaker_paper["sensitivity"][-1] if results_speaker_paper is not None else np.nan,
+                "paper_speaker_specificity": results_speaker_paper["specificity"][-1] if results_speaker_paper is not None else np.nan,
+                "paper_speaker_f1": results_speaker_paper["f1"][-1] if results_speaker_paper is not None else np.nan,
             })
 
             print(f"{model_name} | Fold {fold}/{outer_total} complete")
+
+    if results_speaker_paper is not None:
+        print(f"\nPaper-style speaker metrics (threshold tuned for sensitivity ≥ {paper_min_sens})")
+        for k, vals in results_speaker_paper.items():
+            mean_v = float(np.nanmean(vals)) if len(vals) else float("nan")
+            std_v = float(np.nanstd(vals)) if len(vals) else float("nan")
+            print(f"{k:<12}: {mean_v:.4f} ± {std_v:.4f}")
 
     return results_sample, results_speaker, pd.DataFrame(fold_records)
 
@@ -283,6 +379,27 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
     for col in ['file_name', 'speaker', 'label', 'task']:
         if col in data.columns:
             data[col] = data[col].astype(str).str.strip()
+
+    # Optional task filtering (e.g., DDK-only: --task_suffix _ddk)
+    task_suffix = str(globals().get("TASK_SUFFIX", "") or "").strip()
+    task_contains = str(globals().get("TASK_CONTAINS", "") or "").strip()
+    if "task" in data.columns and (task_suffix or task_contains):
+        before = len(data)
+        mask = pd.Series(True, index=data.index)
+        if task_suffix:
+            mask &= data["task"].astype(str).str.lower().str.endswith(task_suffix.lower(), na=False)
+        if task_contains:
+            mask &= data["task"].astype(str).str.lower().str.contains(task_contains.lower(), na=False)
+        data = data[mask].copy()
+        after = len(data)
+        kept_tasks = sorted(data["task"].astype(str).unique().tolist()) if after > 0 else []
+        print(
+            f"Task filter applied (suffix={task_suffix!r}, contains={task_contains!r}): "
+            f"{after}/{before} rows kept | tasks={kept_tasks}"
+        )
+        if after == 0:
+            print("No rows left after task filtering. Skipping.")
+            return
 
     # Recover missing metadata for Vowels-style IDs (e.g., AVPEPUDEAC0001a1 / AVPEPUDEA0001a1)
     if 'file_name' in data.columns:
@@ -492,6 +609,24 @@ if __name__ == "__main__":
     _parser.add_argument("--outer_splits", type=int, default=10, help="Outer StratifiedGroupKFold splits (default: 10).")
     _parser.add_argument("--inner_splits", type=int, default=5, help="Inner StratifiedGroupKFold splits for GridSearch (default: 5).")
     _parser.add_argument("--repeats", type=int, default=1, help="Repeat nested CV with different seeds (default: 1).")
+    _parser.add_argument(
+        "--paper_min_sens",
+        type=float,
+        default=None,
+        help="If set (e.g., 0.9), also report paper-style speaker metrics using a threshold tuned in inner CV to satisfy sensitivity >= this value (maximize specificity).",
+    )
+    _parser.add_argument(
+        "--task_suffix",
+        type=str,
+        default="",
+        help="Optional: keep only rows whose 'task' ends with this suffix (e.g. '_ddk').",
+    )
+    _parser.add_argument(
+        "--task_contains",
+        type=str,
+        default="",
+        help="Optional: keep only rows whose 'task' contains this substring (case-insensitive).",
+    )
     _args = _parser.parse_args()
 
     # Override global run config from CLI
@@ -500,6 +635,9 @@ if __name__ == "__main__":
         RUN_MODELS[:] = _models
 
     globals()["OUTER_CV_MODE"] = str(_args.outer_cv).strip().lower()
+    globals()["TASK_SUFFIX"] = str(_args.task_suffix or "").strip()
+    globals()["TASK_CONTAINS"] = str(_args.task_contains or "").strip()
+    globals()["PAPER_MIN_SENS"] = _args.paper_min_sens
 
     base_results_dir = Path("classification_results")
     base_results_dir.mkdir(parents=True, exist_ok=True)

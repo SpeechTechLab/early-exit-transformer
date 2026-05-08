@@ -601,6 +601,25 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--save_decodes_path",
+        type=str,
+        default=None,
+        help="""
+            Optional path to a JSONL file where a sample of decoded outputs will be saved.
+            Each line contains: split, exit, ref, hyp.
+        """,
+    )
+
+    parser.add_argument(
+        "--save_decodes_n",
+        type=int,
+        default=50,
+        help="""
+            Number of (ref,hyp) pairs to save per split per exit when --save_decodes_path is set.
+        """,
+    )
+
+    parser.add_argument(
         "--pen_alpha",
         type=int,
         default=1.0,

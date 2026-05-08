@@ -36,7 +36,7 @@ from util.data_loader import infer_glottal_feature_dim
 
 
 def evaluate_batch_ae(args, model, batch, valid_len, split, inf, vocab):
-    beam_size = 10
+    beam_size = int(getattr(args, "beam_size", 10))
     m = 5 / 200  # for deciding maximum length
     # p = 33 # for deciding maximum length for 5000
     p = 30  # for deciding maximum length for 256
@@ -111,6 +111,14 @@ def evaluate_batch_ctc(args, model, batch, valid_len, split, inf, vocab,
         if wer_stats is not None and batch_refs is not None:
             wer_stats[i]["refs"].extend(batch_refs)
             wer_stats[i]["hyps"].extend(batch_hyps)
+            # Save a small sample of ref/hyp pairs for debugging (written later).
+            pairs = wer_stats[i].setdefault("pairs", [])
+            max_pairs = int(getattr(args, "save_decodes_n", 0) or 0)
+            if max_pairs > 0 and len(pairs) < max_pairs:
+                for r, h in zip(batch_refs, batch_hyps):
+                    if len(pairs) >= max_pairs:
+                        break
+                    pairs.append((r, h))
 
     return
 
@@ -153,6 +161,18 @@ def main():
 
     # Parse config from command line arguments
     args = get_args()
+
+    # Optional decode-sample saving (JSONL)
+    _save_path = getattr(args, "save_decodes_path", None)
+    if _save_path:
+        try:
+            globals()["_SAVE_DECODE_FH"] = open(_save_path, "w", encoding="utf-8")
+            globals()["_SAVE_DECODE_N"] = int(getattr(args, "save_decodes_n", 50) or 50)
+            print(f"[Saving decode samples to {_save_path} (up to {globals()['_SAVE_DECODE_N']} per exit per split)]")
+        except Exception as exc:
+            print(f"[Warning] Could not open save_decodes_path={_save_path!r}: {exc}")
+            globals()["_SAVE_DECODE_FH"] = None
+            globals()["_SAVE_DECODE_N"] = 0
 
     input_features_length = args.n_mels
     if args.use_precomputed_features:
@@ -375,10 +395,47 @@ def _print_wer_table(split, wer_stats, n_enc_exits, results):
         if refs:
             wer_val = round(jiwer.wer(refs, hyps) * 100, 2)
             print(f"{i:<6}{wer_val:>{col_w}.2f}{len(refs):>{col_w}}")
-            split_results[f"exit_{i}"] = {"wer_pct": wer_val, "utterances": len(refs)}
+
+            # INS/DEL/SUB breakdown (word-level) when available.
+            ins = dele = sub = None
+            try:
+                if hasattr(jiwer, "compute_measures"):
+                    m = jiwer.compute_measures(refs, hyps)
+                    ins = int(m.get("insertions", 0))
+                    dele = int(m.get("deletions", 0))
+                    sub = int(m.get("substitutions", 0))
+                elif hasattr(jiwer, "process_words"):
+                    out = jiwer.process_words(refs, hyps)
+                    ins = int(getattr(out, "insertions", 0))
+                    dele = int(getattr(out, "deletions", 0))
+                    sub = int(getattr(out, "substitutions", 0))
+            except Exception:
+                ins = dele = sub = None
+
+            if None not in (ins, dele, sub):
+                print(f"{'':<6}{'I/D/S':>{col_w}}{ins}/{dele}/{sub:>{col_w-4}}")
+
+            split_results[f"exit_{i}"] = {
+                "wer_pct": wer_val,
+                "utterances": len(refs),
+                "insertions": ins,
+                "deletions": dele,
+                "substitutions": sub,
+            }
     print(sep)
     print()
     results[split] = split_results
+
+    # Optional: save debug ref/hyp samples to JSONL
+    save_path = getattr(sys.modules[__name__], "_SAVE_DECODE_FH", None)
+    if save_path is not None:
+        try:
+            import json as _json
+            for i in range(1, n_enc_exits + 1):
+                for ref, hyp in wer_stats[i].get("pairs", []) or []:
+                    save_path.write(_json.dumps({"split": split, "exit": i, "ref": ref, "hyp": hyp}, ensure_ascii=False) + "\n")
+        except Exception:
+            pass
 
 
 def _write_results(results, args):
