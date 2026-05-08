@@ -31,6 +31,13 @@ def get_parser():
         help="Comma-separated LibriSpeech split(s) to run inference on (e.g., 'test-clean,test-other' or 'train-clean-100')."
     )
     parser.add_argument(
+        "--librispeech_root",
+        type=str,
+        default="",
+        help="Directory that contains the LibriSpeech folder (same as torchaudio LIBRISPEECH root). "
+        "Default ''. uses ./LibriSpeech/<split> relative to the current working directory.",
+    )
+    parser.add_argument(
         "--n_glottal_features",
         type=int,
         default=0,

@@ -24,3 +24,28 @@ Glottal_signals_db/
 classification_results/
 .idea/
 Vowels/
+
+# macOS
+.DS_Store
+
+# Generated feature tables / artifacts
+features_*.csv
+tmp_features/
+
+# Frame-level glottal CSVs (often 100MB+; GitHub blocks them — keep on /stek, S3, or LFS)
+*framelevel*.csv
+
+# Training/inference artifacts
+*.npz
+trained_model*/
+
+# Plots generated from logs
+loss_total_*.csv
+loss_total_*.png
+
+# Large archives / downloads
+*.tar.gz
+
+# Local datasets (raw corpora)
+German/
+Czech/

@@ -64,6 +64,11 @@ class PrecomputedFeatureDataset(torch.utils.data.Dataset):
         return feat, 16000, text, "spk", utt_id
 
 
+def _librispeech_root(args):
+    """torchaudio LIBRISPEECH(root, url=...) expects root to contain LibriSpeech/<split>."""
+    return getattr(args, "librispeech_root", None) or ""
+
+
 def get_data_loader(args):
     if getattr(args, "use_precomputed_features", False):
         if not args.manifest:
@@ -71,44 +76,44 @@ def get_data_loader(args):
         train_dataset = PrecomputedFeatureDataset(args.manifest)
     else:
         split = getattr(args, "train_split", "all")
+        ls_root = _librispeech_root(args)
+        try:
+            train_dataset1 = torchaudio.datasets.LIBRISPEECH(
+                ls_root, url="train-clean-100", download=False
+            )
 
-    try:
-        train_dataset1 = torchaudio.datasets.LIBRISPEECH(
-            "", url="train-clean-100", download=False
-        )
+            if split in ("100h", "train-clean-100"):
+                train_dataset = train_dataset1
+            else:
+                train_dataset2 = torchaudio.datasets.LIBRISPEECH(
+                    ls_root, url="train-clean-360", download=False
+                )
+                train_dataset3 = torchaudio.datasets.LIBRISPEECH(
+                    ls_root, url="train-other-500", download=False
+                )
+                train_dataset = torch.utils.data.ConcatDataset(
+                    [train_dataset1, train_dataset2, train_dataset3]
+                )
+        except RuntimeError as e:
+            if "Dataset not found" not in str(e):
+                raise
+            print("LibriSpeech training set not found locally. Downloading required split(s)...")
+            train_dataset1 = torchaudio.datasets.LIBRISPEECH(
+                ls_root, url="train-clean-100", download=True
+            )
 
-        if split in ("100h", "train-clean-100"):
-            train_dataset = train_dataset1
-        else:
-            train_dataset2 = torchaudio.datasets.LIBRISPEECH(
-                "", url="train-clean-360", download=False
-            )
-            train_dataset3 = torchaudio.datasets.LIBRISPEECH(
-                "", url="train-other-500", download=False
-            )
-            train_dataset = torch.utils.data.ConcatDataset(
-                [train_dataset1, train_dataset2, train_dataset3]
-            )
-    except RuntimeError as e:
-        if "Dataset not found" not in str(e):
-            raise
-        print("LibriSpeech training set not found locally. Downloading required split(s)...")
-        train_dataset1 = torchaudio.datasets.LIBRISPEECH(
-            "", url="train-clean-100", download=True
-        )
-
-        if split in ("100h", "train-clean-100"):
-            train_dataset = train_dataset1
-        else:
-            train_dataset2 = torchaudio.datasets.LIBRISPEECH(
-                "", url="train-clean-360", download=True
-            )
-            train_dataset3 = torchaudio.datasets.LIBRISPEECH(
-                "", url="train-other-500", download=True
-            )
-            train_dataset = torch.utils.data.ConcatDataset(
-                [train_dataset1, train_dataset2, train_dataset3]
-            )
+            if split in ("100h", "train-clean-100"):
+                train_dataset = train_dataset1
+            else:
+                train_dataset2 = torchaudio.datasets.LIBRISPEECH(
+                    ls_root, url="train-clean-360", download=True
+                )
+                train_dataset3 = torchaudio.datasets.LIBRISPEECH(
+                    ls_root, url="train-other-500", download=True
+                )
+                train_dataset = torch.utils.data.ConcatDataset(
+                    [train_dataset1, train_dataset2, train_dataset3]
+                )
 
     # Optional debug/overfit mode: subset to a small number of utterances.
     max_utts = int(getattr(args, "max_train_utts", 0) or 0)
@@ -141,17 +146,18 @@ def get_infer_data_loader(args, split=None, shuffle=None):
     if shuffle == None:
         shuffle = args.shuffle
 
+    ls_root = _librispeech_root(args)
     try:
         try:
             train_dataset = torchaudio.datasets.LIBRISPEECH(
-                "", url=split, download=False
+                ls_root, url=split, download=False
             )
         except RuntimeError as e:
             if "Dataset not found" not in str(e):
                 raise
             print(f"LibriSpeech {split} not found locally. Downloading dataset...")
             train_dataset = torchaudio.datasets.LIBRISPEECH(
-                "", url=split, download=True
+                ls_root, url=split, download=True
             )
 
         collate_infer_fn = CollateInferFn(args=args)
@@ -178,5 +184,14 @@ def get_infer_data_loader(args, split=None, shuffle=None):
         )
         return data_loader
 
-    except Exception:
-        exit("Invalid data split")
+    except Exception as e:
+        import sys
+        import traceback
+
+        print(
+            f"ERROR: could not load LibriSpeech split {split!r} under root {ls_root!r} "
+            f"(expect {ls_root or '.'}/LibriSpeech/{split}).",
+            file=sys.stderr,
+        )
+        traceback.print_exc()
+        sys.exit(f"Invalid data split ({split!r}): {e}")
