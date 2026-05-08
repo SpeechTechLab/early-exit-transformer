@@ -35,6 +35,10 @@ tmp_features/
 # Frame-level glottal CSVs (often 100MB+; GitHub blocks them — keep on /stek, S3, or LFS)
 *framelevel*.csv
 
+# Non-framelevel but still large glottal CSV exports (keep local / external storage)
+glottal_features_*QCP*_python_tuned*.csv
+glottal_features_test_*.csv
+
 # Training/inference artifacts
 *.npz
 trained_model*/
@@ -43,9 +47,18 @@ trained_model*/
 loss_total_*.csv
 loss_total_*.png
 
+# Slide / report exports
+*.html
+
 # Large archives / downloads
 *.tar.gz
 
 # Local datasets (raw corpora)
 German/
 Czech/
+
+# Colombian DDK raw audio (local folder; contains many .wav files)
+DDK analysis/
+
+# Presentation assets (generated figures/tables)
+presentation_assets/
