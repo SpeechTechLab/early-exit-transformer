@@ -1,5 +1,6 @@
 -r requirements-base.txt
---index-url https://download.pytorch.org/whl/cu126
+# Use extra-index so PyPI still supplies matplotlib/contourpy/etc.; PyTorch index supplies CUDA wheels.
+--extra-index-url https://download.pytorch.org/whl/cu126
 torch==2.8.0
 torchvision==0.23.0
 torchaudio==2.8.0
