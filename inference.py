@@ -17,7 +17,10 @@ except Exception:
         torchaudio.set_audio_backend("soundfile")
     except Exception:
         pass
-from torchaudio.models.decoder import ctc_decoder
+
+# Do not import torchaudio.models.decoder.ctc_decoder here: it requires flashlight-text
+# and would crash before BeamInference can fall back to greedy CTC. Decoding uses
+# util.beam_infer.BeamInference only.
 
 try:
     import jiwer
