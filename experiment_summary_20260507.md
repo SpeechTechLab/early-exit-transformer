@@ -10,17 +10,58 @@
 
 **With glottal**
 
-- **test-clean**: Exit6 **16.31**
-- **test-other**: Exit6 **43.49**
+- **test-clean**: Exit6 **16.24**
+- **test-other**: Exit6 **43.37**
 
-**Without glottal**
+#### With glottal (detailed per-exit WER + I/D/S)
 
-- **test-clean**: Exit6 **15.80**
-- **test-other**: Exit6 **42.37**
+**test-clean** (2620 utts)
+
+- Exit1: WER **44.86**; **I/D/S = 2514 / 3006 / 18067**
+- Exit2: WER **21.30**; **I/D/S = 1138 / 1232 / 8830**
+- Exit3: WER **18.28**; **I/D/S = 1037 / 1125 / 7447**
+- Exit4: WER **18.34**; **I/D/S = 1047 / 1136 / 7461**
+- Exit5: WER **18.02**; **I/D/S = 1024 / 1122 / 7330**
+- Exit6: WER **16.24**; **I/D/S = 911 / 961 / 6667**
+
+**test-other** (2939 utts)
+
+- Exit1: WER **68.75**; **I/D/S = 3008 / 5066 / 27910**
+- Exit2: WER **49.62**; **I/D/S = 2367 / 3187 / 20420**
+- Exit3: WER **45.82**; **I/D/S = 2203 / 3006 / 18773**
+- Exit4: WER **45.76**; **I/D/S = 2193 / 3049 / 18711**
+- Exit5: WER **45.52**; **I/D/S = 2177 / 3009 / 18643**
+- Exit6: WER **43.37**; **I/D/S = 2073 / 2839 / 17788**
+
+**Without glottal** (mels-only checkpoint `trained_model_zip2layer_100h_mels_only_50ep/mod049-transformer`)
+
+- **test-clean**: Exit6 **15.88**
+- **test-other**: Exit6 **42.44**
+
+#### Without glottal (detailed per-exit WER + I/D/S)
+
+**test-clean** (2620 utts)
+
+- Exit1: WER **45.65**; **I/D/S = 2924 / 2752 / 18325**
+- Exit2: WER **20.67**; **I/D/S = 1222 / 1088 / 8555**
+- Exit3: WER **18.03**; **I/D/S = 1117 / 962 / 7401**
+- Exit4: WER **18.03**; **I/D/S = 1125 / 958 / 7395**
+- Exit5: WER **17.43**; **I/D/S = 1139 / 896 / 7129**
+- Exit6: WER **15.88**; **I/D/S = 1001 / 785 / 6561**
+
+**test-other** (2939 utts)
+
+- Exit1: WER **69.22**; **I/D/S = 3488 / 4540 / 28204**
+- Exit2: WER **48.94**; **I/D/S = 2642 / 2819 / 20156**
+- Exit3: WER **45.52**; **I/D/S = 2497 / 2571 / 18760**
+- Exit4: WER **45.52**; **I/D/S = 2482 / 2568 / 18775**
+- Exit5: WER **44.95**; **I/D/S = 2544 / 2506 / 18480**
+- Exit6: WER **42.44**; **I/D/S = 2373 / 2344 / 17499**
 
 ### Interpretation
 
-- **Glottal features did not improve WER** in this run; performance was **slightly worse** with glottal on both `test-clean` (**+0.51 abs WER**) and `test-other` (**+1.12 abs WER**) at the final exit.
+- **Glottal features did not improve WER** in this matched comparison: at Exit6, **with glottal** was **slightly worse** than **mels-only** on `test-clean` (**+0.36 abs WER**, 16.24 vs 15.88) and on `test-other` (**+0.93 abs WER**, 43.37 vs 42.44).
+- **I/D/S at Exit6** is consistent with that story: on **test-clean**, glottal trades **fewer insertions** (911 vs 1001) for **more deletions** (961 vs 785) and **slightly more substitutions** (6667 vs 6561). On **test-other**, glottal again has **fewer insertions** (2073 vs 2373) but **more deletions** (2839 vs 2344) and **more substitutions** (17788 vs 17499), so the net WER still moves against glottal.
 - This is still a useful negative result: it suggests either (a) the current glottal representation/normalization/alignment is not adding information beyond the baseline acoustics, or (b) the model/training recipe is not yet exploiting that information.
 
 ---

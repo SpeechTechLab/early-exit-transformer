@@ -145,13 +145,24 @@ def run(
     if resume and output_csv.exists():
         try:
             if frame_level_output:
-                with open(output_csv, "r", newline="", encoding="utf-8") as f:
-                    reader = csv.DictReader(f)
-                    if reader.fieldnames and "file_name" in reader.fieldnames:
-                        for row in reader:
-                            utt = str(row.get("file_name", "")).strip()
-                            if utt:
-                                done.add(utt)
+                # One row per frame: scanning only `file_name` in chunks avoids loading full DictRows.
+                chunk_rows = 500_000
+                try:
+                    for chunk in pd.read_csv(
+                        output_csv,
+                        usecols=["file_name"],
+                        dtype=str,
+                        chunksize=chunk_rows,
+                    ):
+                        done.update(chunk["file_name"].dropna().astype(str).str.strip())
+                except (ValueError, KeyError):
+                    with open(output_csv, "r", newline="", encoding="utf-8") as f:
+                        reader = csv.DictReader(f)
+                        if reader.fieldnames and "file_name" in reader.fieldnames:
+                            for row in reader:
+                                utt = str(row.get("file_name", "")).strip()
+                                if utt:
+                                    done.add(utt)
                 print(f"Resuming from {output_csv} with {len(done)} completed utterances")
             else:
                 prev = pd.read_csv(output_csv)
@@ -216,7 +227,7 @@ def run(
                         for row in frame_rows:
                             writer.writerow(row)
                         written_rows += len(frame_rows)
-                        done.add(audio_path.stem)
+                    done.add(audio_path.stem)
 
                     processed_since_start += 1
                     if save_every > 0 and idx % save_every == 0:
@@ -264,7 +275,7 @@ def run(
                             for row in frame_rows:
                                 writer.writerow(row)
                             written_rows += len(frame_rows)
-                            done.add(audio_path.stem)
+                        done.add(audio_path.stem)
 
                         processed_since_start += 1
                         if idx % 25 == 0 or idx == len(pending):
