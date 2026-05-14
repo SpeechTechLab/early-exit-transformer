@@ -806,13 +806,22 @@ class CollateInferFn(object):
 
             if "ignore_time_segment_in_scoring" in label:
                 continue
-            spec = spec_transform(waveform, self.args)  # .to(self.args.device)
-            spec = melspec_transform(spec, self.args)
+            if getattr(self.args, "use_precomputed_features", False):
+                spec = waveform.float()
+                if spec.dim() == 1:
+                    spec = spec.unsqueeze(1)
+                if spec.dim() == 3:
+                    spec = spec.squeeze(0)
+            else:
+                spec = spec_transform(waveform, self.args)  # .to(self.args.device)
+                spec = melspec_transform(spec, self.args)
 
-            if spec.dim() == 3:
-                spec = spec.squeeze(0)
+                if spec.dim() == 3:
+                    spec = spec.squeeze(0)
 
-            if getattr(self.args, "append_glottal_features", False):
+            if getattr(self.args, "append_glottal_features", False) and not getattr(
+                self.args, "use_precomputed_features", False
+            ):
                 if getattr(self.args, "glottal_from_waveform", False):
                     g_rep = compute_glottal_features_from_waveform(
                         waveform,

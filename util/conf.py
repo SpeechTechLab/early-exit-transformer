@@ -10,7 +10,8 @@ def get_parser():
         "--manifest",
         type=str,
         default=None,
-        help="Path to the manifest file listing training data. If not provided, the script will use its default data loading behavior."
+        help="Training: required with --use_precomputed_features (feat_csv,transcript per line). "
+        "Inference: same format for eval when --use_precomputed_features is set; --infer_splits is ignored.",
     )
     parser.add_argument(
         "--use_precomputed_features",

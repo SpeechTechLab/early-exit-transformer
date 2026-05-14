@@ -165,6 +165,13 @@ def main():
     # Parse config from command line arguments
     args = get_args()
 
+    if getattr(args, "use_precomputed_features", False) and getattr(
+        args, "append_glottal_features", False
+    ):
+        raise ValueError(
+            "Do not combine --use_precomputed_features with --append_glottal_features for inference."
+        )
+
     # Optional decode-sample saving (JSONL)
     _save_path = getattr(args, "save_decodes_path", None)
     if _save_path:
@@ -328,9 +335,24 @@ def main():
 
     results = {}
 
-    infer_splits = [s.strip() for s in str(getattr(args, "infer_splits", "") or "").split(",") if s.strip()]
-    if not infer_splits:
-        infer_splits = ["test-clean", "test-other"]
+    if getattr(args, "use_precomputed_features", False):
+        if not getattr(args, "manifest", None):
+            raise ValueError(
+                "Inference with --use_precomputed_features requires --manifest (eval utterances: "
+                "csv_path,transcript per line)."
+            )
+        from pathlib import Path
+
+        split = Path(args.manifest).stem
+        infer_splits = [split]
+        print(
+            f"INFO: --use_precomputed_features: using --manifest={args.manifest!r} only; "
+            f"--infer_splits is ignored (WER table tag: {split})."
+        )
+    else:
+        infer_splits = [s.strip() for s in str(getattr(args, "infer_splits", "") or "").split(",") if s.strip()]
+        if not infer_splits:
+            infer_splits = ["test-clean", "test-other"]
 
     for split in infer_splits:  # e.g. "test-clean", "test-other", "train-clean-100"
         print(split)

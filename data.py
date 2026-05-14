@@ -146,6 +146,36 @@ def get_infer_data_loader(args, split=None, shuffle=None):
     if shuffle == None:
         shuffle = args.shuffle
 
+    if getattr(args, "use_precomputed_features", False):
+        if not getattr(args, "manifest", None):
+            raise ValueError(
+                "--manifest is required when --use_precomputed_features is set for inference "
+                "(one line per utterance: feature_csv_path,transcript)."
+            )
+        train_dataset = PrecomputedFeatureDataset(args.manifest)
+        max_utts = int(getattr(args, "max_infer_utts", 0) or 0)
+        if max_utts > 0 and len(train_dataset) > max_utts:
+            subset_seed = int(getattr(args, "subset_seed", 0) or 0)
+            if subset_seed != 0:
+                g = torch.Generator()
+                g.manual_seed(subset_seed)
+                idx = torch.randperm(len(train_dataset), generator=g)[:max_utts].tolist()
+            else:
+                idx = list(range(max_utts))
+            train_dataset = torch.utils.data.Subset(train_dataset, idx)
+            print(f"INFO: precomputed inference subset enabled: {len(train_dataset)} utterances")
+        else:
+            print(f"INFO: precomputed inference from manifest ({len(train_dataset)} utterances)")
+        collate_infer_fn = CollateInferFn(args=args)
+        return torch.utils.data.DataLoader(
+            train_dataset,
+            pin_memory=False,
+            batch_size=args.batch_size,
+            shuffle=shuffle,
+            collate_fn=collate_infer_fn,
+            num_workers=args.n_workers,
+        )
+
     ls_root = _librispeech_root(args)
     try:
         try:
