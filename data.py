@@ -25,7 +25,8 @@ except Exception:
 
 
 class PrecomputedFeatureDataset(torch.utils.data.Dataset):
-    def __init__(self, manifest_path):
+    def __init__(self, manifest_path, feature_dim=None):
+        self.feature_dim = feature_dim
         self.entries = []
 
         with open(manifest_path, "r") as f:
@@ -57,11 +58,34 @@ class PrecomputedFeatureDataset(torch.utils.data.Dataset):
         if arr.ndim == 1:
             feat = torch.tensor(arr, dtype=torch.float32).unsqueeze(1)
         else:
-            if arr.shape[0] > arr.shape[1]:
-                arr = arr.T
+            arr = _orient_precomputed_features(arr, feat_path, self.feature_dim)
             feat = torch.tensor(arr, dtype=torch.float32)
 
         return feat, 16000, text, "spk", utt_id
+
+
+def _orient_precomputed_features(arr, feat_path, feature_dim):
+    """Ensure arr is [feature_dim, time]. CSVs from our pipeline use rows=mels."""
+    if feature_dim is not None:
+        if arr.shape[0] == feature_dim:
+            return arr
+        if arr.shape[1] == feature_dim:
+            return arr.T
+        raise ValueError(
+            f"{feat_path}: expected feature dim {feature_dim}, got shape {arr.shape}"
+        )
+    # Legacy fallback (unsafe when time_frames < feature_dim).
+    if arr.shape[0] > arr.shape[1]:
+        return arr.T
+    return arr
+
+
+def _precomputed_feature_dim(args):
+    if getattr(args, "use_precomputed_features", False) and getattr(
+        args, "n_glottal_features", 0
+    ) > 0:
+        return int(args.n_glottal_features)
+    return int(getattr(args, "n_mels", 80))
 
 
 def _librispeech_root(args):
@@ -73,7 +97,9 @@ def get_data_loader(args):
     if getattr(args, "use_precomputed_features", False):
         if not args.manifest:
             raise ValueError("--manifest is required when --use_precomputed_features is set")
-        train_dataset = PrecomputedFeatureDataset(args.manifest)
+        train_dataset = PrecomputedFeatureDataset(
+            args.manifest, feature_dim=_precomputed_feature_dim(args)
+        )
     else:
         split = getattr(args, "train_split", "all")
         ls_root = _librispeech_root(args)
@@ -152,7 +178,9 @@ def get_infer_data_loader(args, split=None, shuffle=None):
                 "--manifest is required when --use_precomputed_features is set for inference "
                 "(one line per utterance: feature_csv_path,transcript)."
             )
-        train_dataset = PrecomputedFeatureDataset(args.manifest)
+        train_dataset = PrecomputedFeatureDataset(
+            args.manifest, feature_dim=_precomputed_feature_dim(args)
+        )
         max_utts = int(getattr(args, "max_infer_utts", 0) or 0)
         if max_utts > 0 and len(train_dataset) > max_utts:
             subset_seed = int(getattr(args, "subset_seed", 0) or 0)

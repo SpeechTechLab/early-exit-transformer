@@ -2,8 +2,16 @@
 __pycache__/
 *.pyc 
 
+# Command scripts (keep local)
+*.sh
+
 # Data
 LibriSpeech/
+
+# Bridge2AI local exports (large wav trees)
+bridge2ai_adult_wav*/
+bridge2ai_pediatric_wav*/
+bridge2ai_adult_wav*.log
 
 # Test files / old files
 conf_old.py 
@@ -18,8 +26,10 @@ trained_model/
 # Misc.
 paper/
 runs/
+.cache/
 
 .venv/
+.hf_cache/
 Glottal_signals_db/
 classification_results/
 .idea/
@@ -42,6 +52,24 @@ glottal_features_test_*.csv
 # Training/inference artifacts
 *.npz
 trained_model*/
+
+# Whisper fine-tuning outputs
+whisper_runs/
+
+# Generic logs / predictions
+*.log
+*.jsonl
+
+# Bridge2AI Zipformer build outputs (keep manifests + subset_meta.tsv)
+bridge2ai_zipformer_*/mels/
+bridge2ai_zipformer_*/trained_model*/
+bridge2ai_zipformer_*/logs/
+bridge2ai_zipformer_*/wer_*.json
+
+# Keep the split definitions and metadata
+!bridge2ai_zipformer_full_all_tasks/subset_meta.tsv
+!bridge2ai_zipformer_full_all_tasks/manifests/
+!bridge2ai_zipformer_full_all_tasks/manifests/*.txt
 
 # Plots generated from logs
 loss_total_*.csv

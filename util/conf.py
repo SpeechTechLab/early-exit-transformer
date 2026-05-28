@@ -328,6 +328,16 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--min_mel_frames",
+        type=int,
+        default=100,
+        help="""
+            Drop utterances with fewer mel frames than this (avoids BatchNorm errors on
+            very short clips in Zipformer/Conformer training).
+        """
+    )
+
+    parser.add_argument(
         "--n_batch_split",
         type=int,
         default=4,

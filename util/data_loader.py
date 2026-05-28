@@ -15,6 +15,48 @@ def _normalize_utt_id(raw_id):
     return os.path.splitext(base)[0]
 
 
+def normalize_label_for_bpe(label: str) -> str:
+    """LibriSpeech BPE expects upper-case text; Bridge2AI transcripts are lower/mixed case."""
+    text = str(label).upper()
+    text = re.sub(r"[^A-Z0-9' ]+", " ", text)
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def _min_mel_frames(args) -> int:
+    """Skip utterances shorter than this (mel bins) to avoid Conformer BN errors on T=1."""
+    return int(getattr(args, "min_mel_frames", 100))
+
+
+def _max_mel_frames(max_len: int, model_type: str = "") -> int:
+    """Max mel time steps so Zipformer/Conformer subsampling stays within max_len PE."""
+    max_len = int(max_len)
+    if "zipformer" in str(model_type).lower():
+        # Conv1d k=3 s=2: enc_len = (mel - 3) // 2 + 1
+        return 2 * max_len + 1
+    # Conformer-style two stride-2 convs: enc_len ≈ mel // 4
+    return 4 * max_len + 8
+
+
+def _truncate_feature_time(spec, args, ut_id=None):
+    """Truncate [feat, time] tensors to fit positional encoding (args.max_len)."""
+    if spec.dim() != 2:
+        return spec
+    max_frames = _max_mel_frames(
+        getattr(args, "max_len", 2000),
+        getattr(args, "model_type", ""),
+    )
+    if spec.size(1) > max_frames:
+        warned = getattr(args, "_mel_trunc_warn_count", 0)
+        if warned < 5:
+            print(
+                f"INFO: truncating {ut_id or 'utterance'} mel frames "
+                f"{spec.size(1)} -> {max_frames} (max_len={args.max_len})"
+            )
+            args._mel_trunc_warn_count = warned + 1
+        spec = spec[:, :max_frames]
+    return spec
+
+
 def _extract_utt_id(sample):
     """Return utterance ID from dataset sample.
 
@@ -546,8 +588,15 @@ class CollateFn(object):
                         # Only do this if not using precomputed features
                         pass  # ...existing code for audio feature extraction...
                     if self.args.bpe == True:
+                        bpe_label = normalize_label_for_bpe(label)
+                        if not bpe_label:
+                            print('REMOVED:', ut_id, ' LAB: (empty after BPE normalize)')
+                            continue
                         tg = torch.LongTensor(
-                            [self.args.sp.bos_id()] + self.args.sp.encode_as_ids(label) + [self.args.sp.eos_id()])
+                            [self.args.sp.bos_id()]
+                            + self.args.sp.encode_as_ids(bpe_label)
+                            + [self.args.sp.eos_id()]
+                        )
                     else:
                         tg = torch.LongTensor(
                             text_transform.text_to_int("^"+label.lower()+"$"))
@@ -658,12 +707,20 @@ class CollatePaddingFn(object):
                         spec = waveform.float()
                         if spec.dim() == 1:
                             spec = spec.unsqueeze(1)
+                        spec = _truncate_feature_time(spec, self.args, ut_id)
                     else:
                         spec = spec_transform(waveform, self.args)  # .to(device)
                         spec = melspec_transform(spec, self.args)
 
                     if spec.dim() == 3:
                         spec = spec.squeeze(0)
+                    spec = _truncate_feature_time(spec, self.args, ut_id)
+                    if spec.size(1) < _min_mel_frames(self.args):
+                        print(
+                            f"REMOVED: {ut_id}  (too short: {spec.size(1)} mel frames, "
+                            f"min {_min_mel_frames(self.args)})"
+                        )
+                        continue
 
                     if getattr(self.args, "append_glottal_features", False):
                         if getattr(self.args, "glottal_from_waveform", False):
@@ -711,6 +768,20 @@ class CollatePaddingFn(object):
                                     ).squeeze(0)
                         spec = torch.cat([spec, g_rep], dim=0)
 
+                    if self.args.bpe == True:
+                        bpe_label = normalize_label_for_bpe(label)
+                        if not bpe_label:
+                            print('REMOVED:', ut_id, ' LAB: (empty after BPE normalize)')
+                            continue
+                        tg = torch.LongTensor(
+                            [self.args.sp.bos_id()]
+                            + self.args.sp.encode_as_ids(bpe_label)
+                            + [self.args.sp.eos_id()]
+                        )
+                    else:
+                        tg = torch.LongTensor(
+                            text_transform.text_to_int("^"+label.lower()+"$"))
+
                     if spec.dim() == 2:
                         t_source += [spec.size(1)]
                         tensors += [spec]
@@ -719,12 +790,6 @@ class CollatePaddingFn(object):
                         tensors += spec
                     del spec
 
-                    if self.args.bpe == True:
-                        tg = torch.LongTensor(
-                            [self.args.sp.bos_id()] + self.args.sp.encode_as_ids(label) + [self.args.sp.eos_id()])
-                    else:
-                        tg = torch.LongTensor(
-                            text_transform.text_to_int("^"+label.lower()+"$"))
                     targets += [tg.unsqueeze(0)]
                     t_len += [len(tg)]
 
@@ -735,7 +800,7 @@ class CollatePaddingFn(object):
                 else:
                     print('REMOVED:', ut_id, ' LAB:', label)
 
-            if tensors:
+            if tensors and targets:
                 tensors = pad_sequence(tensors, 0)
                 targets = pad_sequence(targets, PAD_token)
                 o_batch = [tensors.squeeze(1), targets.squeeze(1),
@@ -812,12 +877,16 @@ class CollateInferFn(object):
                     spec = spec.unsqueeze(1)
                 if spec.dim() == 3:
                     spec = spec.squeeze(0)
+                spec = _truncate_feature_time(spec, self.args, ut_id)
             else:
                 spec = spec_transform(waveform, self.args)  # .to(self.args.device)
                 spec = melspec_transform(spec, self.args)
 
                 if spec.dim() == 3:
                     spec = spec.squeeze(0)
+                spec = _truncate_feature_time(spec, self.args, ut_id)
+            if spec.size(1) < _min_mel_frames(self.args):
+                continue
 
             if getattr(self.args, "append_glottal_features", False) and not getattr(
                 self.args, "use_precomputed_features", False
@@ -867,23 +936,27 @@ class CollateInferFn(object):
                             ).squeeze(0)
                 spec = torch.cat([spec, g_rep], dim=0)
 
-            t_source += [spec.size(1)]
-
-            tensors += [spec]
-            del spec
-            
             if self.args.bpe == True:
+                bpe_label = normalize_label_for_bpe(label)
+                if not bpe_label:
+                    continue
                 tg = torch.LongTensor(
-                    [self.args.sp.bos_id()] + self.args.sp.encode_as_ids(label) + [self.args.sp.eos_id()])
+                    [self.args.sp.bos_id()]
+                    + self.args.sp.encode_as_ids(bpe_label)
+                    + [self.args.sp.eos_id()]
+                )
             else:
                 tg = torch.LongTensor(
                     text_transform.text_to_int("^"+label.lower()+"$"))
 
+            t_source += [spec.size(1)]
+            tensors += [spec]
             targets += [tg.unsqueeze(0)]
+            del spec
             del waveform
             del label
 
-        if tensors:
+        if tensors and targets:
             tensors = pad_sequence(tensors, 0)
             targets = pad_sequence(targets, PAD_token)
             return tensors.squeeze(1), targets.squeeze(1), torch.tensor(t_source)

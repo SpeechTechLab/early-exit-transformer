@@ -1,0 +1,6 @@
+transformers
+datasets[audio]
+accelerate
+evaluate
+jiwer
+soundfile

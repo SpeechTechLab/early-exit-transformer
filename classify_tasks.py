@@ -19,7 +19,7 @@ from sklearn.metrics import (
     recall_score,
     balanced_accuracy_score,
 )
-from typing import Tuple
+from typing import List, Optional, Tuple, Union
 from xgboost import XGBClassifier
 
 
@@ -110,6 +110,491 @@ def compute_metrics_summary_row(results_sample: dict, results_speaker: dict):
         row[f"speaker_{metric}_mean"] = float(np.nanmean(results_speaker[metric]))
         row[f"speaker_{metric}_std"] = float(np.nanstd(results_speaker[metric]))
     return row
+
+
+def compute_paper_metrics_summary_row(fold_df: pd.DataFrame) -> dict:
+    """Aggregate per-fold paper-style speaker metrics (sens/spec/F1) into summary columns."""
+    row = {}
+    if fold_df is None or fold_df.empty:
+        return row
+    mapping = {
+        "sensitivity": "paper_speaker_sensitivity",
+        "specificity": "paper_speaker_specificity",
+        "f1": "paper_speaker_f1",
+    }
+    for short_name, col in mapping.items():
+        if col not in fold_df.columns:
+            continue
+        vals = fold_df[col].astype(float)
+        row[f"paper_{short_name}_mean"] = float(np.nanmean(vals))
+        row[f"paper_{short_name}_std"] = float(np.nanstd(vals))
+    if "paper_min_sens" in fold_df.columns:
+        row["paper_min_sens"] = float(fold_df["paper_min_sens"].iloc[0])
+    return row
+
+
+def infer_language_code(csv_file: str) -> str:
+    """Map feature CSV filename to paper language code (CZ, DE, ES, CO)."""
+    stem = Path(csv_file).stem.lower()
+    if "german" in stem:
+        return "DE"
+    if "czech" in stem:
+        return "CZ"
+    if "colombian" in stem:
+        return "ES"
+    if "vowels" in stem:
+        return "CO"
+    return "UNK"
+
+
+def is_dedicated_vowels_csv(csv_file: str) -> bool:
+    """
+    True for vowels-only feature tables (e.g. features_Vowels_QCP_python.csv)
+    where task names do not contain 'vowel' (e.g. Glottal_signals_db).
+    """
+    stem = Path(csv_file).stem.lower()
+    if "ddk" in stem:
+        return False
+    if any(lang in stem for lang in ("german", "czech", "colombian")):
+        return False
+    return "vowels" in stem
+
+
+def infer_task_type(csv_file: str) -> str:
+    """DDK, vowels, or other (from filename and active task filter)."""
+    stem = Path(csv_file).stem.lower()
+    if "ddk" in stem:
+        return "DDK"
+    if "vowels" in stem or is_dedicated_vowels_csv(csv_file):
+        return "Vowels"
+    task_contains = str(globals().get("TASK_CONTAINS", "") or "").lower()
+    if "vowel" in task_contains:
+        return "Vowels"
+    return "Other"
+
+
+LANGUAGE_NAMES = {
+    "CZ": "Czech",
+    "DE": "German",
+    "ES": "Colombian (DDK)",
+    "CO": "Colombian (Vowels)",
+    "UNK": "Unknown",
+}
+
+TASK_SECTION_ORDER = ["DDK", "Vowels", "Other"]
+LANG_ORDER = ["CZ", "DE", "ES", "CO", "UNK"]
+
+# Hernandez et al., arXiv:2603.22225v2 — HuBERT-Large, oral DDK, speaker-level metrics (mean, std).
+# Table 3 monolingual (Mono.): train/test on same target language — closest to our per-language setup.
+PAPER_BASELINE_TABLE3_MONO_HUBERT = {
+    "CZ": {
+        "specificity": (0.53, 0.12),
+        "sensitivity": (0.89, 0.07),
+        "f1": (0.76, 0.05),
+    },
+    "DE": {
+        "specificity": (0.47, 0.06),
+        "sensitivity": (0.91, 0.03),
+        "f1": (0.75, 0.02),
+    },
+    "ES": {
+        "specificity": (0.41, 0.09),
+        "sensitivity": (0.88, 0.06),
+        "f1": (0.71, 0.04),
+    },
+}
+
+def _fmt_mean_std(mean: float, std: float) -> str:
+    if np.isnan(mean):
+        return "—"
+    if np.isnan(std):
+        return f"{mean:.2f}"
+    return f"{mean:.2f}±{std:.2f}"
+
+
+def _paper_metric_columns() -> list:
+    return [
+        ("Specificity", "paper_specificity_mean", "paper_specificity_std"),
+        ("Sensitivity", "paper_sensitivity_mean", "paper_sensitivity_std"),
+        ("F1", "paper_f1_mean", "paper_f1_std"),
+    ]
+
+
+def _prepare_paper_summary_table(summary_df: pd.DataFrame) -> pd.DataFrame:
+    """Normalize global summary into one row per (task, language, model, feature_subset)."""
+    if summary_df.empty:
+        return summary_df
+
+    df = summary_df.copy()
+    if "language" not in df.columns:
+        df["language"] = df["csv_file"].map(infer_language_code)
+    if "task_type" not in df.columns:
+        df["task_type"] = df["csv_file"].map(infer_task_type)
+
+    rename = {
+        "paper_sensitivity_mean": "paper_sensitivity_mean",
+        "paper_specificity_mean": "paper_specificity_mean",
+        "paper_f1_mean": "paper_f1_mean",
+        "paper_sensitivity_std": "paper_sensitivity_std",
+        "paper_specificity_std": "paper_specificity_std",
+        "paper_f1_std": "paper_f1_std",
+    }
+    for src, dst in rename.items():
+        if src in df.columns and dst not in df.columns:
+            df[dst] = df[src]
+
+    required = [
+        "paper_sensitivity_mean",
+        "paper_specificity_mean",
+        "paper_f1_mean",
+    ]
+    if not all(c in df.columns for c in required):
+        return pd.DataFrame()
+
+    return df
+
+
+def print_paper_style_language_table(
+    subset_df: pd.DataFrame,
+    title: str,
+    min_sens: float,
+):
+    """Print one paper-style table: rows = languages, columns = Spec / Sens / F1 (mean±std)."""
+    if subset_df.empty:
+        return
+
+    lang_order = ["CZ", "DE", "ES", "CO", "UNK"]
+    langs_present = [l for l in lang_order if l in subset_df["language"].values]
+    langs_present += sorted(set(subset_df["language"]) - set(langs_present))
+
+    print(f"\n{title}")
+    print(f"(speaker-level, threshold tuned for sensitivity ≥ {min_sens:.2f})")
+    header = f"{'Lang.':<6} | {'Specificity':<16} | {'Sensitivity':<16} | {'F1':<16}"
+    print(header)
+    print("-" * len(header))
+
+    for lang in langs_present:
+        row = subset_df[subset_df["language"] == lang]
+        if row.empty:
+            continue
+        r = row.iloc[0]
+        spec = _fmt_mean_std(r.get("paper_specificity_mean", np.nan), r.get("paper_specificity_std", np.nan))
+        sens = _fmt_mean_std(r.get("paper_sensitivity_mean", np.nan), r.get("paper_sensitivity_std", np.nan))
+        f1 = _fmt_mean_std(r.get("paper_f1_mean", np.nan), r.get("paper_f1_std", np.nan))
+        print(f"{lang:<6} | {spec:<16} | {sens:<16} | {f1:<16}")
+
+
+def build_paper_summary_from_folds(folds_df: pd.DataFrame) -> pd.DataFrame:
+    """Rebuild per-language paper summary rows from per-fold metrics."""
+    if folds_df.empty:
+        return pd.DataFrame()
+
+    group_cols = ["csv_file", "task_stem", "model", "feature_subset"]
+    missing = [c for c in group_cols if c not in folds_df.columns]
+    if missing:
+        return pd.DataFrame()
+
+    rows = []
+    for keys, g in folds_df.groupby(group_cols, sort=False):
+        if not isinstance(keys, tuple):
+            keys = (keys,)
+        row = dict(zip(group_cols, keys))
+        row["language"] = infer_language_code(row["csv_file"])
+        row["task_type"] = infer_task_type(row["csv_file"])
+        for short_name, col in [
+            ("sensitivity", "paper_speaker_sensitivity"),
+            ("specificity", "paper_speaker_specificity"),
+            ("f1", "paper_speaker_f1"),
+        ]:
+            if col not in g.columns:
+                continue
+            vals = g[col].astype(float)
+            row[f"paper_{short_name}_mean"] = float(np.nanmean(vals))
+            row[f"paper_{short_name}_std"] = float(np.nanstd(vals))
+        if "paper_min_sens" in g.columns:
+            row["paper_min_sens"] = float(g["paper_min_sens"].iloc[0])
+        rows.append(row)
+    return pd.DataFrame(rows)
+
+
+def _paper_baseline_cell(lang: str, metric: str) -> str:
+    """Table 3 monolingual HuBERT-Large baseline (Hernandez et al., arXiv:2603.22225v2)."""
+    row = PAPER_BASELINE_TABLE3_MONO_HUBERT.get(lang)
+    if not row:
+        return "—"
+    mean, std = row[metric]
+    return _fmt_mean_std(mean, std)
+
+
+def select_best_combination_per_language(paper_df: pd.DataFrame) -> pd.DataFrame:
+    """
+    For each (task_type, language), pick the model + feature_subset with highest paper F1.
+    Ties break on specificity, then sensitivity.
+    """
+    if paper_df.empty:
+        return paper_df
+
+    df = paper_df.copy()
+    sort_cols = ["paper_f1_mean", "paper_specificity_mean", "paper_sensitivity_mean"]
+    for c in sort_cols:
+        if c not in df.columns:
+            df[c] = np.nan
+    df = df.sort_values(
+        ["task_type", "language"] + sort_cols,
+        ascending=[True, True, False, False, False],
+    )
+    return df.groupby(["task_type", "language"], as_index=False).first()
+
+
+def write_best_results_markdown(
+    paper_df: pd.DataFrame,
+    run_output_dir: Path,
+    min_sens: float,
+) -> Path:
+    """Write best_results_by_language.md — best model/features per language for DDK and Vowels."""
+    best_df = select_best_combination_per_language(paper_df)
+    if best_df.empty:
+        return None
+
+    best_df = best_df.copy()
+    best_df["language_name"] = best_df["language"].map(lambda c: LANGUAGE_NAMES.get(c, c))
+    best_df.to_csv(run_output_dir / "best_results_by_language.csv", index=False)
+
+    run_name = run_output_dir.name
+    lines = [
+        "# Best classification results per language",
+        "",
+        "Speaker-level metrics (**mean ± std** over outer CV folds). "
+        f"Threshold tuned for **sensitivity ≥ {min_sens:.2f}** "
+        "(OneVoice paper protocol, [arXiv:2603.22225v2](https://arxiv.org/abs/2603.22225)).",
+        "",
+        f"For each language, the **best** model and feature subset is chosen by highest **F1** "
+        "(ties: specificity, then sensitivity).",
+        "",
+        f"**Run:** `{run_output_dir}`",
+        "",
+    ]
+
+    task_types = [t for t in TASK_SECTION_ORDER if t in best_df["task_type"].values]
+    task_types += sorted(set(best_df["task_type"]) - set(task_types))
+
+    for task_type in task_types:
+        section = best_df[best_df["task_type"] == task_type]
+        if section.empty:
+            continue
+
+        task_label = "DDK (diadochokinetic)" if task_type == "DDK" else (
+            "Vowels" if task_type == "Vowels" else str(task_type)
+        )
+        lines.append(f"## {task_label}")
+        lines.append("")
+        include_paper_baseline = task_type == "DDK"
+        if include_paper_baseline:
+            lines.append(
+                "| Lang | Language | Model | Features | Specificity | Sensitivity | F1 | "
+                "Paper Spec | Paper Sens | Paper F1 |"
+            )
+            lines.append(
+                "|------|----------|-------|----------|-------------|-------------|-----|"
+                "-------------|-------------|----------|"
+            )
+        else:
+            lines.append(
+                "| Lang | Language | Model | Features | Specificity | Sensitivity | F1 |"
+            )
+            lines.append(
+                "|------|----------|-------|----------|-------------|-------------|-----|"
+            )
+
+        langs = [l for l in LANG_ORDER if l in section["language"].values]
+        langs += sorted(set(section["language"]) - set(langs))
+
+        for lang in langs:
+            row = section[section["language"] == lang]
+            if row.empty:
+                continue
+            r = row.iloc[0]
+            model = str(r.get("model", "")).upper()
+            feat = str(r.get("feature_subset", ""))
+            spec = _fmt_mean_std(
+                r.get("paper_specificity_mean", np.nan),
+                r.get("paper_specificity_std", np.nan),
+            )
+            sens = _fmt_mean_std(
+                r.get("paper_sensitivity_mean", np.nan),
+                r.get("paper_sensitivity_std", np.nan),
+            )
+            f1 = _fmt_mean_std(
+                r.get("paper_f1_mean", np.nan),
+                r.get("paper_f1_std", np.nan),
+            )
+            lang_name = LANGUAGE_NAMES.get(lang, lang)
+            if include_paper_baseline:
+                lines.append(
+                    f"| {lang} | {lang_name} | {model} | `{feat}` | {spec} | {sens} | {f1} | "
+                    f"{_paper_baseline_cell(lang, 'specificity')} | "
+                    f"{_paper_baseline_cell(lang, 'sensitivity')} | "
+                    f"{_paper_baseline_cell(lang, 'f1')} |"
+                )
+            else:
+                lines.append(
+                    f"| {lang} | {lang_name} | {model} | `{feat}` | {spec} | {sens} | {f1} |"
+                )
+
+        lines.append("")
+        if include_paper_baseline:
+            lines.append(
+                "*Paper baseline: Hernandez et al., Table 3 monolingual HuBERT-Large, DDK "
+                "([arXiv:2603.22225v2](https://arxiv.org/abs/2603.22225)).*"
+            )
+            lines.append("")
+
+        for lang in langs:
+            row = section[section["language"] == lang]
+            if row.empty:
+                continue
+            r = row.iloc[0]
+            lang_name = LANGUAGE_NAMES.get(lang, lang)
+            lines.append(f"### {lang} — {lang_name}")
+            lines.append("")
+            lines.append(
+                f"- **Best configuration:** {str(r.get('model', '')).upper()} + `{r.get('feature_subset', '')}`"
+            )
+            lines.append(f"- **Source CSV:** `{r.get('csv_file', '')}`")
+            if "n_rows" in r and not pd.isna(r.get("n_rows")):
+                lines.append(f"- **Samples:** {int(r['n_rows'])}")
+            if "n_features" in r and not pd.isna(r.get("n_features")):
+                lines.append(f"- **Features used:** {int(r['n_features'])}")
+            lines.append(
+                f"- **Specificity:** {_fmt_mean_std(r.get('paper_specificity_mean', np.nan), r.get('paper_specificity_std', np.nan))}"
+            )
+            lines.append(
+                f"- **Sensitivity:** {_fmt_mean_std(r.get('paper_sensitivity_mean', np.nan), r.get('paper_sensitivity_std', np.nan))}"
+            )
+            lines.append(
+                f"- **F1:** {_fmt_mean_std(r.get('paper_f1_mean', np.nan), r.get('paper_f1_std', np.nan))}"
+            )
+            if "speaker_balanced_acc_mean" in r and not pd.isna(r.get("speaker_balanced_acc_mean")):
+                lines.append(
+                    f"- **Speaker balanced accuracy (0.5 threshold):** "
+                    f"{r['speaker_balanced_acc_mean']:.3f} ± {r.get('speaker_balanced_acc_std', 0):.3f}"
+                )
+            lines.append("")
+
+    md_path = run_output_dir / "best_results_by_language.md"
+    md_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")
+    return md_path
+
+
+def save_and_print_paper_style_reports(
+    summary_df: pd.DataFrame,
+    run_output_dir: Path,
+    min_sens: float,
+    feature_subset: str = "glottal_plus_direct",
+    models: list = None,
+):
+    """
+    Print and save paper-style tables (arXiv:2603.22225v2 format): by language and metric.
+    Requires --paper_min_sens and paper_* columns in summary_df.
+    """
+    paper_df = _prepare_paper_summary_table(summary_df)
+    if paper_df.empty:
+        print("\nPaper-style tables skipped: no paper metrics in summary (use --paper_min_sens 0.9).")
+        return
+
+    paper_df = paper_df.sort_values(["task_type", "model", "feature_subset", "language"])
+    paper_df.to_csv(run_output_dir / "paper_metrics_by_language.csv", index=False)
+
+    long_rows = []
+    for _, r in paper_df.iterrows():
+        for metric_name, mean_col, std_col in _paper_metric_columns():
+            long_rows.append({
+                "task_type": r.get("task_type"),
+                "language": r.get("language"),
+                "model": r.get("model"),
+                "feature_subset": r.get("feature_subset"),
+                "metric": metric_name,
+                "mean": r.get(mean_col, np.nan),
+                "std": r.get(std_col, np.nan),
+                "formatted": _fmt_mean_std(r.get(mean_col, np.nan), r.get(std_col, np.nan)),
+            })
+    long_df = pd.DataFrame(long_rows)
+    long_df.to_csv(run_output_dir / "paper_metrics_long.csv", index=False)
+
+    # Pivot: one CSV per (task_type, model, feature_subset) with languages as rows
+    pivot_dir = run_output_dir / "paper_tables"
+    pivot_dir.mkdir(parents=True, exist_ok=True)
+
+    models_filter = models if models else sorted(paper_df["model"].unique())
+    task_types = sorted(paper_df["task_type"].unique())
+    feature_subsets = sorted(paper_df["feature_subset"].unique())
+
+    print("\n" + "=" * 80)
+    print("PAPER-STYLE RESULTS (compare to arXiv:2603.22225v2 Tables 2–3)")
+    print("Columns: Specificity | Sensitivity | F1  (speaker-level, mean ± std over outer folds)")
+    print("=" * 80)
+
+    for task_type in task_types:
+        for model in models_filter:
+            for feat in feature_subsets:
+                mask = (
+                    (paper_df["task_type"] == task_type)
+                    & (paper_df["model"] == model)
+                    & (paper_df["feature_subset"] == feat)
+                )
+                sub = paper_df.loc[mask]
+                if sub.empty:
+                    continue
+                title = f"{task_type} | {model.upper()} | {feat}"
+                print_paper_style_language_table(sub, title, min_sens)
+
+                pivot = sub.set_index("language")[
+                    [
+                        "paper_specificity_mean",
+                        "paper_specificity_std",
+                        "paper_sensitivity_mean",
+                        "paper_sensitivity_std",
+                        "paper_f1_mean",
+                        "paper_f1_std",
+                    ]
+                ].copy()
+                pivot.columns = [
+                    "spec_mean",
+                    "spec_std",
+                    "sens_mean",
+                    "sens_std",
+                    "f1_mean",
+                    "f1_std",
+                ]
+                safe_name = f"{task_type}_{model}_{feat}".replace("/", "_")
+                pivot.to_csv(pivot_dir / f"{safe_name}.csv")
+
+    # Highlight default feature subset (matches paper QCP glottal + direct features)
+    highlight = paper_df[paper_df["feature_subset"] == feature_subset]
+    if not highlight.empty:
+        print("\n" + "-" * 80)
+        print(f"PRIMARY COMPARISON (feature subset: {feature_subset})")
+        print("-" * 80)
+        for task_type in sorted(highlight["task_type"].unique()):
+            for model in models_filter:
+                sub = highlight[(highlight["task_type"] == task_type) & (highlight["model"] == model)]
+                if sub.empty:
+                    continue
+                print_paper_style_language_table(
+                    sub,
+                    f"{task_type} | {model.upper()} | {feature_subset}",
+                    min_sens,
+                )
+
+    md_path = write_best_results_markdown(paper_df, run_output_dir, min_sens)
+
+    print(f"\nPaper-style CSVs saved under: {run_output_dir}")
+    print(f"  - paper_metrics_by_language.csv")
+    print(f"  - paper_metrics_long.csv")
+    print(f"  - paper_tables/*.csv")
+    print(f"  - best_results_by_language.csv")
+    if md_path is not None:
+        print(f"  - {md_path.name}")
 
 
 def save_explanatory_plots(summary_df: pd.DataFrame, out_dir: Path, task_name: str):
@@ -219,7 +704,7 @@ def evaluate_model_with_nested_cv(
                 param_grid=param_grid,
                 cv=inner_cv.split(X_train, y_train, g_train),
                 scoring="roc_auc",
-                n_jobs=-1,
+                n_jobs=int(os.environ.get("CLASSIFY_N_JOBS", "-1")),
                 verbose=0,
             )
             grid_search.fit(X_train, y_train)
@@ -328,6 +813,28 @@ def evaluate_model_with_nested_cv(
     return results_sample, results_speaker, pd.DataFrame(fold_records)
 
 
+def _read_csv_if_nonempty(path: Union[str, Path]) -> Optional[pd.DataFrame]:
+    """Read a CSV path, returning None if the file is missing or has no rows."""
+    path = Path(path)
+    if not path.exists() or path.stat().st_size == 0:
+        return None
+    try:
+        df = pd.read_csv(path)
+    except pd.errors.EmptyDataError:
+        return None
+    if df.empty or len(df.columns) == 0:
+        return None
+    return df
+
+
+def _concat_nonempty_csvs(paths: List[Path]) -> pd.DataFrame:
+    frames = [_read_csv_if_nonempty(p) for p in paths]
+    frames = [f for f in frames if f is not None]
+    if not frames:
+        return pd.DataFrame()
+    return pd.concat(frames, ignore_index=True)
+
+
 def build_feature_subsets(X: pd.DataFrame):
     glottal_base_roots = ['NAQ', 'QOQ', 'HRF', 'H1H2']
     direct_roots = ['G_RMS', 'G_ZCR', 'G_CREST', 'DG_PEAK', 'RES_RMS']
@@ -335,8 +842,12 @@ def build_feature_subsets(X: pd.DataFrame):
     glottal_base_cols = []
     direct_cols = []
     mfcc_cols = []
+    hubert_cols = []
 
     for col in X.columns:
+        if col.startswith('hubert_'):
+            hubert_cols.append(col)
+            continue
         if col.startswith('mfcc_'):
             mfcc_cols.append(col)
             continue
@@ -346,11 +857,14 @@ def build_feature_subsets(X: pd.DataFrame):
         elif any(col.startswith(f"{r}_") for r in direct_roots):
             direct_cols.append(col)
 
+    glottal_plus_direct_cols = glottal_base_cols + direct_cols
     subsets = {
         'glottal_only': glottal_base_cols,
-        'glottal_plus_direct': glottal_base_cols + direct_cols,
-        'glottal_plus_direct_plus_mfcc': glottal_base_cols + direct_cols + mfcc_cols,
+        'glottal_plus_direct': glottal_plus_direct_cols,
+        'glottal_plus_direct_plus_mfcc': glottal_plus_direct_cols + mfcc_cols,
         'glottal_plus_mfcc': glottal_base_cols + mfcc_cols,
+        'hubert_all': hubert_cols,
+        'hubert_plus_glottal_plus_direct': hubert_cols + glottal_plus_direct_cols,
     }
 
     # Preserve original order from X.columns for reproducibility
@@ -390,16 +904,26 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
             mask &= data["task"].astype(str).str.lower().str.endswith(task_suffix.lower(), na=False)
         if task_contains:
             mask &= data["task"].astype(str).str.lower().str.contains(task_contains.lower(), na=False)
-        data = data[mask].copy()
-        after = len(data)
-        kept_tasks = sorted(data["task"].astype(str).unique().tolist()) if after > 0 else []
-        print(
-            f"Task filter applied (suffix={task_suffix!r}, contains={task_contains!r}): "
-            f"{after}/{before} rows kept | tasks={kept_tasks}"
-        )
-        if after == 0:
-            print("No rows left after task filtering. Skipping.")
+        filtered = data[mask].copy()
+        after = len(filtered)
+        if after == 0 and is_dedicated_vowels_csv(csv_file):
+            print(
+                f"Task filter (suffix={task_suffix!r}, contains={task_contains!r}) matched 0 rows; "
+                f"{Path(csv_file).name} is vowels-only — keeping all {before} rows."
+            )
+        elif after == 0:
+            print(
+                f"Task filter applied (suffix={task_suffix!r}, contains={task_contains!r}): "
+                f"0/{before} rows kept. Skipping."
+            )
             return
+        else:
+            data = filtered
+            kept_tasks = sorted(data["task"].astype(str).unique().tolist())
+            print(
+                f"Task filter applied (suffix={task_suffix!r}, contains={task_contains!r}): "
+                f"{after}/{before} rows kept | tasks={kept_tasks}"
+            )
 
     # Recover missing metadata for Vowels-style IDs (e.g., AVPEPUDEAC0001a1 / AVPEPUDEA0001a1)
     if 'file_name' in data.columns:
@@ -563,6 +1087,8 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
             row = {
                 "csv_file": csv_file,
                 "task_stem": task_stem,
+                "language": infer_language_code(csv_file),
+                "task_type": infer_task_type(csv_file),
                 "model": model_key,
                 "model_title": model_cfg['title'],
                 "feature_subset": subset_name,
@@ -570,6 +1096,7 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
                 "n_rows": len(data),
             }
             row.update(compute_metrics_summary_row(model_sample, model_speaker))
+            row.update(compute_paper_metrics_summary_row(fold_df))
             summary_rows.append(row)
 
             if not fold_df.empty:
@@ -578,6 +1105,13 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
                 fold_df["model"] = model_key
                 fold_df["feature_subset"] = subset_name
                 all_fold_dfs.append(fold_df)
+
+    if not summary_rows:
+        print(
+            "WARNING: No feature subsets produced results. "
+            "For HuBERT tables ensure columns are named hubert_0, hubert_1, ..."
+        )
+        return
 
     summary_df = pd.DataFrame(summary_rows)
     summary_csv = task_out_dir / "summary_metrics.csv"
@@ -627,7 +1161,58 @@ if __name__ == "__main__":
         default="",
         help="Optional: keep only rows whose 'task' contains this substring (case-insensitive).",
     )
+    _parser.add_argument(
+        "--paper_feature_subset",
+        type=str,
+        default="glottal_plus_direct",
+        help="Feature subset highlighted in the primary paper-style comparison table (default: glottal_plus_direct).",
+    )
+    _parser.add_argument(
+        "--report_from_run",
+        type=str,
+        default=None,
+        help="Regenerate paper-style tables from an existing run directory (no re-training).",
+    )
     _args = _parser.parse_args()
+
+    if _args.report_from_run:
+        run_output_dir = Path(_args.report_from_run)
+        if not run_output_dir.is_dir():
+            raise SystemExit(f"Run directory not found: {run_output_dir}")
+
+        min_sens = float(_args.paper_min_sens) if _args.paper_min_sens is not None else 0.9
+        summary_path = run_output_dir / "global_summary_metrics.csv"
+        fold_files = sorted(run_output_dir.glob("*/fold_metrics.csv"))
+
+        if summary_path.exists():
+            summary_df = pd.read_csv(summary_path)
+            if "paper_f1_mean" not in summary_df.columns and fold_files:
+                paper_from_folds = build_paper_summary_from_folds(
+                    _concat_nonempty_csvs(fold_files)
+                )
+                if not paper_from_folds.empty:
+                    merge_keys = ["csv_file", "model", "feature_subset"]
+                    summary_df = summary_df.drop(
+                        columns=[c for c in summary_df.columns if c.startswith("paper_")],
+                        errors="ignore",
+                    )
+                    summary_df = summary_df.merge(paper_from_folds, on=merge_keys, how="left", suffixes=("", "_fold"))
+        elif fold_files:
+            summary_df = build_paper_summary_from_folds(
+                _concat_nonempty_csvs(fold_files)
+            )
+        else:
+            raise SystemExit(f"No summary or fold_metrics found in {run_output_dir}")
+
+        _models = [m.strip().lower() for m in str(_args.models).split(",") if m.strip()]
+        save_and_print_paper_style_reports(
+            summary_df,
+            run_output_dir,
+            min_sens=min_sens,
+            feature_subset=str(_args.paper_feature_subset),
+            models=_models or None,
+        )
+        raise SystemExit(0)
 
     # Override global run config from CLI
     _models = [m.strip().lower() for m in str(_args.models).split(",") if m.strip()]
@@ -668,8 +1253,8 @@ if __name__ == "__main__":
 
         # Run-level global exports for easy cross-task comparison
         summary_files = sorted(run_output_dir.glob("*/summary_metrics.csv"))
-        if summary_files:
-            all_summary = pd.concat([pd.read_csv(f) for f in summary_files], ignore_index=True)
+        all_summary = _concat_nonempty_csvs(summary_files)
+        if not all_summary.empty:
             all_summary.to_csv(run_output_dir / "global_summary_metrics.csv", index=False)
 
             # Convenience ranking by speaker AUC (descending)
@@ -678,8 +1263,17 @@ if __name__ == "__main__":
                 ranked.to_csv(run_output_dir / "global_summary_ranked_by_speaker_auc.csv", index=False)
 
         fold_files = sorted(run_output_dir.glob("*/fold_metrics.csv"))
-        if fold_files:
-            all_folds = pd.concat([pd.read_csv(f) for f in fold_files], ignore_index=True)
+        all_folds = _concat_nonempty_csvs(fold_files)
+        if not all_folds.empty:
             all_folds.to_csv(run_output_dir / "global_fold_metrics.csv", index=False)
+
+        if _args.paper_min_sens is not None and not all_summary.empty:
+            save_and_print_paper_style_reports(
+                all_summary,
+                run_output_dir,
+                min_sens=float(_args.paper_min_sens),
+                feature_subset=str(_args.paper_feature_subset),
+                models=_models,
+            )
 
         print(f"Global summary files saved in: {run_output_dir}")
