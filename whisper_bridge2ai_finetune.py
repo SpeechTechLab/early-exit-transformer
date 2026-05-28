@@ -57,16 +57,24 @@ def build_examples(
     manifest_path: Path,
     feature_to_wav: dict[str, str],
     repo_root: Path,
+    audio_root: Path,
+    strict_audio: bool,
 ) -> list[dict[str, Any]]:
     rows = read_manifest(manifest_path)
     examples: list[dict[str, Any]] = []
     missing = 0
+    missing_audio = 0
     for feat, txt in rows:
         wav_rel = feature_to_wav.get(feat)
         if wav_rel is None:
             missing += 1
             continue
-        wav_path = (repo_root / wav_rel).resolve()
+        wav_path = (audio_root / wav_rel).resolve()
+        if not wav_path.exists():
+            missing_audio += 1
+            if strict_audio:
+                raise FileNotFoundError(f"Missing audio file: {wav_path}")
+            continue
         examples.append(
             {
                 "audio_path": str(wav_path),
@@ -76,6 +84,11 @@ def build_examples(
         )
     if missing:
         print(f"[warn] {missing} manifest rows missing from subset_meta.tsv: {manifest_path}")
+    if missing_audio:
+        print(
+            f"[warn] {missing_audio} manifest rows missing audio under audio_root='{audio_root}': "
+            f"{manifest_path} (set --audio_root or use --strict_audio)"
+        )
     return examples
 
 
@@ -104,6 +117,16 @@ def main() -> None:
     ap.add_argument("--eval_manifest", default="bridge2ai_zipformer_full_all_tasks/manifests/read_dev.txt")
     ap.add_argument("--test_manifest", default="bridge2ai_zipformer_full_all_tasks/manifests/read_test.txt")
     ap.add_argument("--output_dir", default="whisper_runs/bridge2ai_readspeech")
+    ap.add_argument(
+        "--audio_root",
+        default=".",
+        help="Base directory prepended to wav_path from subset_meta.tsv (default: repo root).",
+    )
+    ap.add_argument(
+        "--strict_audio",
+        action="store_true",
+        help="Fail fast if any audio_path is missing under --audio_root (default: skip missing).",
+    )
     ap.add_argument("--language", default="english")
     ap.add_argument("--task", default="transcribe", choices=["transcribe", "translate"])
 
@@ -118,11 +141,14 @@ def main() -> None:
     ap.add_argument("--logging_steps", type=int, default=50)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--fp16", action="store_true")
-    ap.add_argument("--num_workers", type=int, default=2)
+    # Used both for dataset preprocessing (num_proc) and DataLoader workers.
+    # Default 0 keeps things predictable in containers and avoids fork overhead.
+    ap.add_argument("--num_workers", type=int, default=0)
     ap.add_argument("--save_pred_samples", type=int, default=40)
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parent
+    audio_root = (repo_root / args.audio_root).resolve()
     subset_meta_tsv = (repo_root / args.subset_meta_tsv).resolve()
     feature_to_wav = load_feature_to_wav_map(subset_meta_tsv)
 
@@ -139,9 +165,27 @@ def main() -> None:
     )
 
     # Build datasets from manifests.
-    train_ex = build_examples((repo_root / args.train_manifest).resolve(), feature_to_wav, repo_root)
-    eval_ex = build_examples((repo_root / args.eval_manifest).resolve(), feature_to_wav, repo_root)
-    test_ex = build_examples((repo_root / args.test_manifest).resolve(), feature_to_wav, repo_root)
+    train_ex = build_examples(
+        (repo_root / args.train_manifest).resolve(),
+        feature_to_wav,
+        repo_root,
+        audio_root=audio_root,
+        strict_audio=bool(args.strict_audio),
+    )
+    eval_ex = build_examples(
+        (repo_root / args.eval_manifest).resolve(),
+        feature_to_wav,
+        repo_root,
+        audio_root=audio_root,
+        strict_audio=bool(args.strict_audio),
+    )
+    test_ex = build_examples(
+        (repo_root / args.test_manifest).resolve(),
+        feature_to_wav,
+        repo_root,
+        audio_root=audio_root,
+        strict_audio=bool(args.strict_audio),
+    )
 
     ds_train = Dataset.from_list(train_ex)
     ds_eval = Dataset.from_list(eval_ex)
@@ -149,6 +193,9 @@ def main() -> None:
 
     processor = AutoProcessor.from_pretrained(args.model_id)
     model = AutoModelForSpeechSeq2Seq.from_pretrained(args.model_id)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model.to(device)
+    print(f"[info] torch={torch.__version__} cuda_available={torch.cuda.is_available()} device={device}")
 
     # Force language/task tokens (stabilizes decoding for English-only ASR).
     if hasattr(processor, "tokenizer") and hasattr(processor.tokenizer, "set_prefix_tokens"):
@@ -173,9 +220,12 @@ def main() -> None:
         return batch
 
     # Map in-process (small-ish datasets); for bigger runs, switch to batched map + caching.
-    ds_train = ds_train.map(prepare_batch, remove_columns=ds_train.column_names, num_proc=args.num_workers)
-    ds_eval = ds_eval.map(prepare_batch, remove_columns=ds_eval.column_names, num_proc=args.num_workers)
-    ds_test = ds_test.map(prepare_batch, remove_columns=ds_test.column_names, num_proc=args.num_workers)
+    print("[info] preprocessing audio -> whisper log-mels (CPU). This can take a while...")
+    num_proc = max(int(args.num_workers), 1)
+    ds_train = ds_train.map(prepare_batch, remove_columns=ds_train.column_names, num_proc=num_proc)
+    ds_eval = ds_eval.map(prepare_batch, remove_columns=ds_eval.column_names, num_proc=num_proc)
+    ds_test = ds_test.map(prepare_batch, remove_columns=ds_test.column_names, num_proc=num_proc)
+    print("[info] preprocessing done; starting training (GPU if available).")
 
     data_collator = DataCollatorSpeechSeq2SeqWithPadding(processor=processor)
     wer_metric = evaluate.load("wer")
