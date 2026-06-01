@@ -133,7 +133,6 @@ bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-
 bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-10.csv,port is a strong wine with a smoky taste
 bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-9.csv,a six comes up more often than a ten
 bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-8.csv,he knew the skill of the great young actress
-bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-10.csv,madam
 bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-4.csv,red tape bound with a small other food
 bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-4.csv,his hip struck the knee of the next player
 bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-5.csv,burn peat after the lugs give out
@@ -251,401 +250,122 @@ bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-5.csv,
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_508262_32d36ee7_passage-4.csv,my most memorable moment was riding on a caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-2.csv,taking a trip to the amusement park and riding on the cat filler was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_298287_8dab3474_passage-7.csv,i gave the man my coins
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-3.csv,do you like pikes well
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_998739_052a4556_passage-2.csv,taking a trip to the museum park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-4.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_706018_c13b3036_passage-9.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_525312_70b2cb27_passage-12.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_175226_3af893f8_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508262_32d36ee7_passage-8.csv,tit
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-11.csv,people were so scared they screamed as we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_525312_70b2cb27_passage-6.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-7.csv,i gave the man my coins
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-5.csv,when i saw how high the cennepeller rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-9.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_512342_52f4cc70_passage-3.csv,do you like mission perks perks where i should do two mission stuff i want twice last year
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_582604_38733411_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-3.csv,do you like amusement parks well
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-7.csv,i gave the man my coin
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-5.csv,when i saw how high the caterpillar rose to the bible side
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_706018_c13b3036_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_170031_4c60cd8e_passage-4.csv,my most memorable moment was when i was writing on the canadian part of the ciccinctergolkoster
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-12.csv,as quickly as it started
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-10.csv,people were so scared they screamed as we lifted swiftly
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-7.csv,after waiting in line for 30 minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_706018_c13b3036_passage-8.csv,tick tick tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-7.csv,i gave the man my coins
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-6.csv,after waiting in line for thirty minutes i made it to the front where the man measured my height to see if i was tall enough
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-11.csv,as quickly as it started
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-7.csv,i give the man a coin change and jumping on the cart
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-9.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-4.csv,do you like the amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_042842_9aab42fc_passage-8.csv,kick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_998739_052a4556_passage-1.csv,that night i dreamed of the wild ride on the catapult
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-6.csv,after waiting in line for thirty minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-1.csv,that night i dreamt of that wild bride on that caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-6.csv,after waiting in line for thirty minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_876364_bca66770_passage-13.csv,the way i was scared
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_693107_84af9932_passage-3.csv,do you like amusement parks well i sure do to the amusement park myself i went twice last spring
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-8.csv,tick
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-1.csv,that night i dreamt of a wild ride on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-6.csv,after waiting in the minutes i made to the foreman
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-3.csv,do you like amusement parks well sure i do to amuse myself i went twice last spring
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-7.csv,i gave the man my coins
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-9.csv,what i was scared
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_895611_7e6dee67_passage-6.csv,after waiting in line for 30 minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_876364_bca66770_passage-10.csv,tick tick tick
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-1.csv,the night i dreamt of the wild ride on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_562722_5c52a991_passage-4.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-6.csv,after waiting in line for 30 minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-2.csv,taking a trip to ride the amusement park
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-9.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-2.csv,taking a trip to amusement park and riding on the caterpillar was the most memorable moment ever
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-4.csv,my most memorable moment was riding on the caterpillar which is a gigantic roller coaster high above the ground
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-6.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_650177_253b6ec3_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-4.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_042842_9aab42fc_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-8.csv,tick tick tick the caterpillar climbed slowly up the tracks i went so high i could see the parking lot
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_525312_70b2cb27_passage-11.csv,people were so scared they screamed as we swiftly zoomed fast fast and faster along the track
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-3.csv,you like amusement parks well
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_512342_52f4cc70_passage-6.csv,when i saw how the keep was the blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-4.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-1.csv,that night i dream of the wild ride on the cat
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_693107_84af9932_passage-5.csv,when i saw how high the caterpillar rose into this bright blue sky
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_042842_9aab42fc_passage-10.csv,people are so scared they scream if we whiffed zoom fast and faster along the tracks
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-11.csv,as quickly as it started a lot
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-5.csv,when i saw how high the caterpillar rose into this bright blue sky
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_298287_8dab3474_passage-10.csv,people were so scared
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_562722_5c52a991_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_693107_84af9932_passage-2.csv,taking a trip to the amusement park and riding on the catapult was my most memorable moment
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_170031_4c60cd8e_passage-6.csv,ill make it to the front of the men i hate to see if i start
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-4.csv,my most want was ride on a cavern which at giant roller coaster high about up ground
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-8.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-6.csv,after waiting in line for thirty minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-8.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_650177_253b6ec3_passage-9.csv,the way i was scared
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-3.csv,do you like amusement parks well
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-12.csv,people were so scared they screamed as we swiftly zoomed fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-9.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-1.csv,that night
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-8.csv,tick
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-10.csv,people were so scared they screamed and we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_508262_32d36ee7_passage-7.csv,i gave my man my coins and asked for a change and jump on the cart
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_895611_7e6dee67_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-9.csv,boy was i scared i thought to myself theres no turning back now
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-6.csv,after waiting in line for 30 minutes i made it to the front where the man measured my height to see if i was tall enough
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_170031_4c60cd8e_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700088_819f166f_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_298287_8dab3474_passage-1.csv,that night
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-4.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_706018_c13b3036_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-4.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-6.csv,after waiting in line for thirty minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_582604_38733411_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_298287_8dab3474_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_650177_253b6ec3_passage-7.csv,i gave the man my coins and asked for change to jump on the cart
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_706018_c13b3036_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_508262_32d36ee7_passage-10.csv,people were so scared they screamed as we shifted the room fast fast and faster along the tracks
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-6.csv,after waiting in the line for 30 minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_876364_bca66770_passage-6.csv,when i saw how the caterpillar rose into the bright blue sky
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-10.csv,people were so scared they screamed as we swiftly moved fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-1.csv,last night
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_298287_8dab3474_passage-8.csv,tick tick tick the caterpillar climbed slowly up the tracks i went so high i could see the parking lot
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-1.csv,that night i dreamt of a wild ride on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_508262_32d36ee7_passage-11.csv,at quickly as a study get caterpillar came through stuff on footney over time to park the car and drive home
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-1.csv,that night
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_693107_84af9932_passage-4.csv,my most memorable moment was riding on a caterpillar which was gigantic roller coaster high above the ground
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast and faster along the track
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-7.csv,i gave the man my coins
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_175226_3af893f8_passage-11.csv,as quickly as it started the caterpillar came to a stop unfortunately
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-11.csv,people
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-11.csv,as quickly as it started
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_562722_5c52a991_passage-10.csv,people were so scared they screamed as we swiftly zoomed
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-2.csv,taking a trip to the amusement park and riding on the active hill was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast fast and faster along the tracks
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_175226_3af893f8_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-6.csv,after waiting in line for thirty minutes i made it into the front where the man measured my height to see if i was tall enough
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_562722_5c52a991_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-7.csv,i gave the man my coins
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-4.csv,my most memorable moment
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_700088_819f166f_passage-4.csv,my most memorable moment was riding the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_693107_84af9932_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-12.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-5.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_042842_9aab42fc_passage-11.csv,as quick as it started
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_700088_819f166f_passage-10.csv,people were so scared they screamed as we shifted in fast paths and faster along the track
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_693107_84af9932_passage-11.csv,as quickly as it started
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-2.csv,taking a trip to the park and riding on the caterpillar was my most memorable moment
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_998739_052a4556_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_706018_c13b3036_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-3.csv,do you like amusement parks well
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_998739_052a4556_passage-10.csv,people were so scared they screamed and whispered
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_170031_4c60cd8e_passage-3.csv,day and night
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-10.csv,people were so scared they scrambled as we swiftly swam fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_298287_8dab3474_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_706018_c13b3036_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_525312_70b2cb27_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_895611_7e6dee67_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast and faster along the tracks
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-4.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-6.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-10.csv,people were so scared
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_508262_32d36ee7_passage-5.csv,when i saw her hide the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-8.csv,tick
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_582604_38733411_passage-2.csv,taking a trip to the amusement park and riding on the capillar was my most memorable moment ever
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_876364_bca66770_passage-1.csv,that night i dream of a wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-2.csv,taking a trip to the museum park and riding on the calipiter was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_298287_8dab3474_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-5.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-11.csv,as quick as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-10.csv,people were so sad they screamed as we seamlessly zoomed fast and faster along the tracks
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_895611_7e6dee67_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700088_819f166f_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508262_32d36ee7_passage-9.csv,boy was i scared
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_525312_70b2cb27_passage-5.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-11.csv,as quickly as it started
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-7.csv,i am the man my voice
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_960677_dc881d52_passage-4.csv,the most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-5.csv,when i saw how high the calipiter rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_582604_38733411_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-2.csv,i take a trip to the park and ride on the tower was my most
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-6.csv,after waiting in line for thirty minutes i made it to the front where the man measured my height to see if i was tall enough to go
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-10.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-9.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_042842_9aab42fc_passage-4.csv,my mom was riding on a roller coaster high above the ground
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-10.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_562722_5c52a991_passage-9.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-2.csv,taking a trip to the amusement park and riding the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_876364_bca66770_passage-2.csv,taking a trip to the amusement park and riding the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_525312_70b2cb27_passage-8.csv,i gave command by coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700088_819f166f_passage-8.csv,the caterpillar climbed slowly up the tracks i went so high i could see the parking lot
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_895611_7e6dee67_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700088_819f166f_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_876364_bca66770_passage-9.csv,i gave the man my clothes and jumped on the cart
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-10.csv,people were so scared that they screamed as we swifted zoom fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-11.csv,as quickly as it started
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-4.csv,my most memorable moment was riding the hat of the world
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-11.csv,as quickly as it started
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-4.csv,my most memorable moment was when i was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_650177_253b6ec3_passage-10.csv,people were so scared they screamed as we swift zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_170031_4c60cd8e_passage-10.csv,people were so thrilled that they screamed at the sound and so fast and faster along the tracks
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-9.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-7.csv,i gave them in my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-1.csv,that night
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-6.csv,after waiting in line for 30 minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_998739_052a4556_passage-4.csv,my most moment was riding on a caterpillar which is a giggled roller coaster high above the ground
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-7.csv,i gave the man my coins and asked for change and jumped on the car
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-6.csv,after waiting in line for 30 minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-3.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-1.csv,that night
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_512342_52f4cc70_passage-11.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-7.csv,i gave the man my coins and asked for a change and jumped onto the cart
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_998739_052a4556_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-1.csv,that night i dreamt of a wild ride on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-10.csv,people were so scared they screamed as we swiftly zoom fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_562722_5c52a991_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_974426_8d404883_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_706018_c13b3036_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-9.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-3.csv,do you like parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_693107_84af9932_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_369810_38569064_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-11.csv,as quickly as the start of the caterpillar came to a stop unfortunately
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-2.csv,taking a trip to the music park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-1.csv,that night i dreamt of a wild ride on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-5.csv,when i was high
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_998739_052a4556_passage-7.csv,the man
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-3.csv,do you like amusement parks well
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_700088_819f166f_passage-6.csv,after waiting in line for thirty minutes i made it to the front where the man measured my height to see if it was tall enough
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-1.csv,that night
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-3.csv,do you like amusement parks well
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_525312_70b2cb27_passage-1.csv,that night i dreamt of the wild ride on the keterapiver
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-7.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-8.csv,i gave the man my coins
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my moment
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_635238_61a625d6_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-4.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-7.csv,i gave the man my coins
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-1.csv,that night i dream of the caterpillar wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_175226_3af893f8_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_345733_969d7cd1_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508262_32d36ee7_passage-6.csv,after waiting in line for thirty minutes i made it to the front where the man measured my height to see if i was tall enough
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_042842_9aab42fc_passage-9.csv,boys
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_171602_41acf35a_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_650177_253b6ec3_passage-1.csv,that night i dreamt of the wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-6.csv,after waiting in line for 30 minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_582604_38733411_passage-11.csv,as quickly as it started the caterpillar came to a stop unfortunately it was time to pack the car and drive home
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_700460_1c499682_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-4.csv,my most memorable moment was riding on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast and faster along the tracks
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_298287_8dab3474_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-11.csv,people were so scared they screamed as we swiftly zoomed fast
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-5.csv,when i saw how high the color pair rose into the light blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-4.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_512342_52f4cc70_passage-8.csv,just give the man my change
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_562722_5c52a991_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_316253_db24be2f_passage-3.csv,do you like the amusement parks well sure i do to amuse myself
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-10.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_876364_bca66770_passage-12.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_525312_70b2cb27_passage-9.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_508486_2c29046f_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_496006_dce87ee2_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-6.csv,after waiting in line for thirty minutes i made it to the front where the man measured my height to see if i was tall enough
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-1.csv,that night i dreamed of the ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_895611_7e6dee67_passage-7.csv,i gave the man my coins
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_512342_52f4cc70_passage-1.csv,that night i dreamed of the world on the calipari land
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_175226_3af893f8_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_172554_dbeba77e_passage-9.csv,tick
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_508262_32d36ee7_passage-2.csv,taking a trip to the amusement park and riding on a caterpillar was my most memorable moment ever
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_170031_4c60cd8e_passage-1.csv,its a great day and then its a great day
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_876364_bca66770_passage-4.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_170031_4c60cd8e_passage-5.csv,when i saw how high the superpowers i do the rightness of life i knew this for me
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_149298_4ef600e5_passage-8.csv,ticka ticka ticka the climber climb bed show up to the trap i went so high i couldnt see the parking lot
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-7.csv,i gave the man my coins and asked for change and jumped on the card
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-5.csv,when i saw how high the caterpillar rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_895611_7e6dee67_passage-4.csv,my most memorable moment was riding on the caterpillar
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_042842_9aab42fc_passage-6.csv,after watching in life for a minute
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-3.csv,do you like amusement parks well
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_810391_e3e2064e_passage-2.csv,taking a trip to the amusement park is riding on the caterpillar was my most memorable ride moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-6.csv,after waiting in line for 30 minutes
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_553093_e8c1e2ce_passage-1.csv,that night i dream of the wild ride on the pineapple
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_650177_253b6ec3_passage-8.csv,tick
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_042842_9aab42fc_passage-1.csv,that night i dreamed of the wild ride on the cart
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_257630_bdf6d125_passage-9.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_926014_5c2cdc19_passage-10.csv,people were so scared they screamed as they simply zoomed fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_643046_21246290_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_693107_84af9932_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_810785_dc466bb1_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_471462_0cb87201_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-10.csv,people were so scared
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_086224_d3f7f7c6_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_891512_0897dcde_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_895611_7e6dee67_passage-9.csv,boy
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_555037_4525918b_passage-10.csv,people were so scared they screamed as we swiftly zoomed past fast and faster along tracks
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-6.csv,after waiting in line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_998739_052a4556_passage-6.csv,after waiting in the line for 30 minutes
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_310574_8df20055_passage-3.csv,do you like amusement parks well
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_562722_5c52a991_passage-8.csv,tick
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_700088_819f166f_passage-1.csv,that night i dreamed of the wild ride on the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_490133_6f0fddb3_passage-10.csv,people were so scared they screamed as we swiftly zoomed fast
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_170031_4c60cd8e_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_562722_5c52a991_passage-6.csv,after waiting in line for thirty minutes i made it to the front where the man measured my height to see if i was tall enough
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_569092_ff6976fe_passage-11.csv,as quickly as it started
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_170031_4c60cd8e_passage-9.csv,oh
 bridge2ai_zipformer_full_all_tasks/mels/pediatric_042842_9aab42fc_passage-5.csv,when i saw how high the cart rose into the bright blue sky
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_298287_8dab3474_passage-4.csv,my most memorable moment was riding the caterpillar
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-8.csv,tick
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_819393_3769a930_passage-9.csv,boy
-bridge2ai_zipformer_full_all_tasks/mels/pediatric_525312_70b2cb27_passage-2.csv,taking a trip to the amusement park and riding on the caterpillar was my most memorable moment ever

@@ -70,6 +70,8 @@ bridge2ai_zipformer_*/wer_*.json
 !bridge2ai_zipformer_full_all_tasks/subset_meta.tsv
 !bridge2ai_zipformer_full_all_tasks/manifests/
 !bridge2ai_zipformer_full_all_tasks/manifests/*.txt
+bridge2ai_zipformer_full_all_tasks/manifests/*.before_clean
+bridge2ai_zipformer_full_all_tasks/manifests/*.before_dedupe
 
 # Plots generated from logs
 loss_total_*.csv
