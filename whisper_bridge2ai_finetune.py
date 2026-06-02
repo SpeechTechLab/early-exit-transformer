@@ -150,6 +150,11 @@ def main() -> None:
         action="store_true",
         help="Skip training; run Whisper baseline inference on eval/test only.",
     )
+    ap.add_argument(
+        "--debug_audio",
+        action="store_true",
+        help="Print per-utterance audio loading + feature extraction timing (first few items).",
+    )
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parent
@@ -171,13 +176,16 @@ def main() -> None:
     import inspect
 
     # Build datasets from manifests.
-    train_ex = build_examples(
-        (repo_root / args.train_manifest).resolve(),
-        feature_to_wav,
-        repo_root,
-        audio_root=audio_root,
-        strict_audio=bool(args.strict_audio),
-    )
+    # In eval-only mode we intentionally skip train_manifest to avoid extra IO/warnings.
+    train_ex = []
+    if not args.eval_only:
+        train_ex = build_examples(
+            (repo_root / args.train_manifest).resolve(),
+            feature_to_wav,
+            repo_root,
+            audio_root=audio_root,
+            strict_audio=bool(args.strict_audio),
+        )
     eval_ex = build_examples(
         (repo_root / args.eval_manifest).resolve(),
         feature_to_wav,
@@ -253,8 +261,23 @@ def main() -> None:
         return audio_t.cpu().numpy()
 
     def prepare_batch(batch: dict[str, Any]) -> dict[str, Any]:
-        audio = _load_and_resample(batch["audio_path"])
-        batch["input_features"] = processor.feature_extractor(audio, sampling_rate=target_sr).input_features[0]
+        import time
+
+        p = batch["audio_path"]
+        t0 = time.time()
+        audio = _load_and_resample(p)
+        t1 = time.time()
+        feats = processor.feature_extractor(audio, sampling_rate=target_sr).input_features[0]
+        t2 = time.time()
+        if args.debug_audio:
+            # This runs inside datasets.map; keep output short and informative.
+            dur = len(audio) / float(target_sr) if target_sr else 0.0
+            print(
+                f"[debug_audio] {Path(p).name} | {dur:.1f}s | "
+                f"decode={t1 - t0:.2f}s feat={t2 - t1:.2f}s",
+                flush=True,
+            )
+        batch["input_features"] = feats
         batch["labels"] = processor.tokenizer(batch["text"]).input_ids
         return batch
 
