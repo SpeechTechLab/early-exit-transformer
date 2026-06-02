@@ -229,14 +229,28 @@ def main() -> None:
     target_sr = processor.feature_extractor.sampling_rate
 
     def _load_and_resample(path: str) -> np.ndarray:
-        wav, sr = torchaudio.load(path)
-        # mixdown to mono
-        if wav.ndim == 2 and wav.shape[0] > 1:
-            wav = wav.mean(dim=0, keepdim=True)
-        wav = wav.squeeze(0)
-        if sr != target_sr:
-            wav = torchaudio.functional.resample(wav, sr, target_sr)
-        return wav.cpu().numpy()
+        # torchaudio.load may hang in minimal containers when it falls back to FFmpeg.
+        # Use soundfile for robust wav decoding; keep torchaudio only for resampling.
+        try:
+            import soundfile as sf
+
+            audio, sr = sf.read(path, dtype="float32", always_2d=False)
+            if audio is None:
+                raise RuntimeError("soundfile returned None")
+            # mixdown to mono if needed
+            if getattr(audio, "ndim", 1) == 2:
+                audio = audio.mean(axis=1).astype(np.float32, copy=False)
+            audio_t = torch.from_numpy(np.asarray(audio, dtype=np.float32))
+        except Exception as exc:
+            print(f"[warn] soundfile decode failed for {path!r}: {exc}; falling back to torchaudio.load")
+            wav, sr = torchaudio.load(path)
+            if wav.ndim == 2 and wav.shape[0] > 1:
+                wav = wav.mean(dim=0, keepdim=True)
+            audio_t = wav.squeeze(0).float()
+
+        if int(sr) != int(target_sr):
+            audio_t = torchaudio.functional.resample(audio_t, int(sr), int(target_sr))
+        return audio_t.cpu().numpy()
 
     def prepare_batch(batch: dict[str, Any]) -> dict[str, Any]:
         audio = _load_and_resample(batch["audio_path"])
