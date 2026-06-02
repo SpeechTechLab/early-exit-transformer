@@ -127,7 +127,8 @@ def main() -> None:
         action="store_true",
         help="Fail fast if any audio_path is missing under --audio_root (default: skip missing).",
     )
-    ap.add_argument("--language", default="english")
+    # Use explicit language code to avoid Whisper language detection/translation surprises.
+    ap.add_argument("--language", default="en")
     ap.add_argument("--task", default="transcribe", choices=["transcribe", "translate"])
 
     ap.add_argument("--max_steps", type=int, default=2000)
@@ -230,9 +231,21 @@ def main() -> None:
     model.to(device)
     print(f"[info] torch={torch.__version__} cuda_available={torch.cuda.is_available()} device={device}")
 
-    # Force language/task tokens (stabilizes decoding for English-only ASR).
-    if hasattr(processor, "tokenizer") and hasattr(processor.tokenizer, "set_prefix_tokens"):
-        processor.tokenizer.set_prefix_tokens(language=args.language, task=args.task)
+    # Force language/task tokens for decoding.
+    # Whisper generation uses forced decoder ids; without this, multilingual models may
+    # language-detect and/or translate, which breaks WER against English refs.
+    try:
+        if hasattr(processor, "get_decoder_prompt_ids"):
+            model.generation_config.forced_decoder_ids = processor.get_decoder_prompt_ids(
+                language=args.language, task=args.task
+            )
+        # Newer transformers honor these flags directly.
+        if hasattr(model.generation_config, "language"):
+            model.generation_config.language = args.language
+        if hasattr(model.generation_config, "task"):
+            model.generation_config.task = args.task
+    except Exception as exc:
+        print(f"[warn] could not set forced decoder ids for language/task: {exc}")
 
     target_sr = processor.feature_extractor.sampling_rate
 
