@@ -282,8 +282,14 @@ def main() -> None:
         return batch
 
     # Map in-process (small-ish datasets); for bigger runs, switch to batched map + caching.
+    # IMPORTANT: num_proc=1 still spawns a subprocess (datasets.map multiprocessing).
+    # In Docker + CUDA that often hangs; use num_proc=None (main process) when num_workers=0.
     print("[info] preprocessing audio -> whisper log-mels (CPU). This can take a while...")
-    num_proc = max(int(args.num_workers), 1)
+    num_proc = int(args.num_workers) if int(args.num_workers) > 0 else None
+    if num_proc is None:
+        print("[info] preprocessing in main process (num_workers=0; avoids map hang)", flush=True)
+    else:
+        print(f"[info] preprocessing with num_proc={num_proc}", flush=True)
     if not args.eval_only:
         ds_train = ds_train.map(prepare_batch, remove_columns=ds_train.column_names, num_proc=num_proc)
     if len(eval_ex):
