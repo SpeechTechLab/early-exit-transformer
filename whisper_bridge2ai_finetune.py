@@ -163,6 +163,7 @@ def main() -> None:
         Seq2SeqTrainingArguments,
         Seq2SeqTrainer,
     )
+    import inspect
 
     # Build datasets from manifests.
     train_ex = build_examples(
@@ -243,7 +244,10 @@ def main() -> None:
     out_dir = (repo_root / args.output_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    training_args = Seq2SeqTrainingArguments(
+    # Transformers renamed some TrainingArguments fields across versions.
+    # Keep this script runnable in older/newer container images.
+    ta_sig = inspect.signature(Seq2SeqTrainingArguments.__init__)
+    ta_kwargs: dict[str, Any] = dict(
         output_dir=str(out_dir),
         per_device_train_batch_size=args.per_device_train_batch_size,
         per_device_eval_batch_size=args.per_device_eval_batch_size,
@@ -253,7 +257,6 @@ def main() -> None:
         max_steps=args.max_steps,
         fp16=args.fp16,
         logging_steps=args.logging_steps,
-        evaluation_strategy="steps",
         eval_steps=args.eval_steps,
         save_steps=args.save_steps,
         save_total_limit=3,
@@ -264,6 +267,16 @@ def main() -> None:
         dataloader_num_workers=args.num_workers,
         remove_unused_columns=False,
     )
+    if "evaluation_strategy" in ta_sig.parameters:
+        ta_kwargs["evaluation_strategy"] = "steps"
+    elif "eval_strategy" in ta_sig.parameters:
+        ta_kwargs["eval_strategy"] = "steps"
+    else:
+        raise TypeError(
+            "Unsupported transformers version: Seq2SeqTrainingArguments has neither "
+            "'evaluation_strategy' nor 'eval_strategy'."
+        )
+    training_args = Seq2SeqTrainingArguments(**ta_kwargs)
 
     trainer = Seq2SeqTrainer(
         args=training_args,
