@@ -145,6 +145,11 @@ def main() -> None:
     # Default 0 keeps things predictable in containers and avoids fork overhead.
     ap.add_argument("--num_workers", type=int, default=0)
     ap.add_argument("--save_pred_samples", type=int, default=40)
+    ap.add_argument(
+        "--eval_only",
+        action="store_true",
+        help="Skip training; run Whisper baseline inference on eval/test only.",
+    )
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parent
@@ -188,7 +193,26 @@ def main() -> None:
         strict_audio=bool(args.strict_audio),
     )
 
-    ds_train = Dataset.from_list(train_ex)
+    if args.eval_only:
+        if not eval_ex and not test_ex:
+            raise SystemExit(
+                "No utterances with audio found for eval/test. Whisper needs wav files under "
+                f"--audio_root ({audio_root}). Expected paths like "
+                f"{audio_root}/bridge2ai_adult_wav_v2/<id>__<session>__<task>.wav "
+                "(see subset_meta.tsv). Copy bridge2ai_adult_wav_v2/ to the repo or set --audio_root."
+            )
+        if train_ex:
+            print(f"[info] eval_only: ignoring {len(train_ex)} train rows with audio")
+    else:
+        if not train_ex:
+            raise SystemExit(
+                f"No training utterances with audio under --audio_root ({audio_root}). "
+                "All manifest rows were skipped (missing wav). Copy bridge2ai_adult_wav_v2/ into the "
+                "repo root or pass --audio_root to the directory that contains it. "
+                "Generate a transfer list with: python3 export_whisper_wav_paths.py --manifest <path>"
+            )
+
+    ds_train = Dataset.from_list(train_ex if train_ex else eval_ex[:1])
     ds_eval = Dataset.from_list(eval_ex)
     ds_test = Dataset.from_list(test_ex)
 
@@ -223,10 +247,13 @@ def main() -> None:
     # Map in-process (small-ish datasets); for bigger runs, switch to batched map + caching.
     print("[info] preprocessing audio -> whisper log-mels (CPU). This can take a while...")
     num_proc = max(int(args.num_workers), 1)
-    ds_train = ds_train.map(prepare_batch, remove_columns=ds_train.column_names, num_proc=num_proc)
-    ds_eval = ds_eval.map(prepare_batch, remove_columns=ds_eval.column_names, num_proc=num_proc)
-    ds_test = ds_test.map(prepare_batch, remove_columns=ds_test.column_names, num_proc=num_proc)
-    print("[info] preprocessing done; starting training (GPU if available).")
+    if not args.eval_only:
+        ds_train = ds_train.map(prepare_batch, remove_columns=ds_train.column_names, num_proc=num_proc)
+    if len(eval_ex):
+        ds_eval = ds_eval.map(prepare_batch, remove_columns=ds_eval.column_names, num_proc=num_proc)
+    if len(test_ex):
+        ds_test = ds_test.map(prepare_batch, remove_columns=ds_test.column_names, num_proc=num_proc)
+    print("[info] preprocessing done.")
 
     data_collator = DataCollatorSpeechSeq2SeqWithPadding(processor=processor)
     wer_metric = evaluate.load("wer")
@@ -247,6 +274,7 @@ def main() -> None:
     # Transformers renamed some TrainingArguments fields across versions.
     # Keep this script runnable in older/newer container images.
     ta_sig = inspect.signature(Seq2SeqTrainingArguments.__init__)
+    max_steps = 0 if args.eval_only else args.max_steps
     ta_kwargs: dict[str, Any] = dict(
         output_dir=str(out_dir),
         per_device_train_batch_size=args.per_device_train_batch_size,
@@ -254,7 +282,7 @@ def main() -> None:
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         learning_rate=args.learning_rate,
         warmup_steps=args.warmup_steps,
-        max_steps=args.max_steps,
+        max_steps=max_steps,
         fp16=args.fp16,
         logging_steps=args.logging_steps,
         eval_steps=args.eval_steps,
@@ -288,10 +316,17 @@ def main() -> None:
         compute_metrics=compute_metrics,
     )
 
-    trainer.train()
+    if not args.eval_only:
+        print("[info] starting training (GPU if available).")
+        trainer.train()
+    else:
+        print("[info] eval_only: skipping training; running generate on eval/test.")
 
     # Evaluate on dev + test and dump a small sample of predictions.
     def _predict_and_dump(split_name: str, ds) -> dict[str, Any]:
+        if ds is None or len(ds) == 0:
+            print(f"[warn] skip predict: empty {split_name} split")
+            return {}
         pred = trainer.predict(ds, max_length=225)
         metrics = {f"{split_name}_{k}": float(v) for k, v in pred.metrics.items()}
 
@@ -309,8 +344,10 @@ def main() -> None:
         return metrics
 
     all_metrics: dict[str, Any] = {}
-    all_metrics.update(_predict_and_dump("dev", ds_eval))
-    all_metrics.update(_predict_and_dump("test", ds_test))
+    if len(eval_ex):
+        all_metrics.update(_predict_and_dump("dev", ds_eval))
+    if len(test_ex):
+        all_metrics.update(_predict_and_dump("test", ds_test))
 
     (out_dir / "final_metrics.json").write_text(json.dumps(all_metrics, indent=2), encoding="utf-8")
     print("Wrote:", out_dir / "final_metrics.json")

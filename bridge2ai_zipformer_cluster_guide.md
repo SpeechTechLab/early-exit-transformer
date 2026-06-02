@@ -17,9 +17,48 @@ Use this after `git pull` on `/stek/patsoura/early-exit-transformer` (branch `ir
 | Libri init checkpoint | `trained_model_zip2layer_100h_mels_only_50ep/mod049-transformer` | ~122 MB |
 | Read-speech mel CSVs | `bridge2ai_zipformer_full_all_tasks/mels/*.csv` | ~2.8 GB for current manifests |
 | SentencePiece BPE | `sentencepiece/build/libri.bpe-256.model` (+ lex/tok) | few MB |
-| Bridge2AI wav (optional) | `bridge2ai_adult_wav_v2/`, `bridge2ai_pediatric_wav_v2/` | only if rebuilding mels |
+| Bridge2AI wav (optional) | `bridge2ai_adult_wav_v2/`, `bridge2ai_pediatric_wav_v2/` | **required for Whisper**; only optional for mel-only Zipformer |
+| Whisper deps | `pip install -r requirements-whisper.txt` | HuggingFace `transformers`, `datasets`, etc. |
 
 If mels are missing, either copy from your Mac (see below) or run `build_bridge2ai_zipformer_subset.py` on the cluster when wav trees are available.
+
+### Whisper: copy only the wavs you need
+
+Whisper reads **wav** paths from `subset_meta.tsv` (not mel CSVs). On the cluster, check:
+
+```bash
+ls bridge2ai_adult_wav_v2 | head   # must exist under repo root (or set --audio_root)
+```
+
+Build a path list for your manifests (on Mac or cluster):
+
+```bash
+python3 export_whisper_wav_paths.py \
+  --manifest bridge2ai_zipformer_full_all_tasks/manifests/clean_short_en/read_train.txt \
+  --manifest bridge2ai_zipformer_full_all_tasks/manifests/clean_short_en/read_dev.txt \
+  --manifest bridge2ai_zipformer_full_all_tasks/manifests/clean_short_en/read_test.txt \
+  --output bridge2ai_zipformer_full_all_tasks/manifests/clean_short_en_wav_paths.txt
+```
+
+From **Mac** (wavs under repo root), into Docker on cluster:
+
+```bash
+COPYFILE_DISABLE=1 tar czf - -T bridge2ai_zipformer_full_all_tasks/manifests/clean_short_en_wav_paths.txt \
+  | ssh -J ipatsoura@jumpsso.fbk.eu stek@digis-rf4421.fbk.eu \
+  'docker exec -i ee-ipatsoura-stek-4 tar -xzf - -C /stek/patsoura/early-exit-transformer'
+```
+
+Baseline Whisper (no finetune) after wavs exist:
+
+```bash
+python3 whisper_bridge2ai_finetune.py \
+  --model_id openai/whisper-large-v3 \
+  --eval_manifest bridge2ai_zipformer_full_all_tasks/manifests/clean_short_en/read_dev.txt \
+  --test_manifest bridge2ai_zipformer_full_all_tasks/manifests/clean_short_en/read_test.txt \
+  --audio_root . \
+  --output_dir whisper_runs/bridge2ai_read_clean_short_en_baseline \
+  --eval_only --fp16
+```
 
 ## 1. Update code on the cluster
 
