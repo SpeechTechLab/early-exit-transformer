@@ -4,7 +4,7 @@ Filter Bridge2AI Zipformer manifests for ASR training.
 
 Removes utterances that are poor training targets: missing mel CSVs, very short
 transcripts, pediatric passage-8/9 fragments (single-word refs), and optional
-task exclusions. Writes cleaned manifests and a short drop log.
+task/text exclusions. Writes cleaned manifests and a short drop log.
 
 Usage:
   python3 clean_bridge2ai_manifest.py \\
@@ -72,6 +72,10 @@ def _should_keep(row: Row, args: argparse.Namespace) -> Tuple[bool, str]:
     feat = Path(row.feat_path)
     if not feat.is_file():
         return False, "missing_csv"
+
+    if args.exclude_transcript_regex is not None:
+        if args.exclude_transcript_regex.search(row.transcript):
+            return False, "exclude_transcript_regex"
 
     words = row.transcript.split()
     n_words = len(words)
@@ -223,6 +227,15 @@ def main() -> None:
         help="Drop if task name contains any of these substrings.",
     )
     p.add_argument(
+        "--exclude-transcript-regex",
+        type=str,
+        default=r"⁇|ignore_time_segment_in_scoring",
+        help=(
+            "Drop if transcript matches this regex. Default removes unknown-marker '⁇' "
+            "and 'ignore_time_segment_in_scoring' placeholders."
+        ),
+    )
+    p.add_argument(
         "--no-dedupe-feat",
         action="store_true",
         help="Keep duplicate feature paths if present.",
@@ -244,6 +257,9 @@ def main() -> None:
     args.exclude_task_substrings = [
         s.strip() for s in args.exclude_task_substrings.split(",") if s.strip()
     ]
+    args.exclude_transcript_regex = (
+        re.compile(args.exclude_transcript_regex) if args.exclude_transcript_regex else None
+    )
 
     if not args.in_place and args.output_dir is None:
         args.in_place = True

@@ -1,0 +1,239 @@
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-3.csv,one step more and the board will collapse
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-3.csv,they took their kids from the public school
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-9.csv,a lame back kept his score low
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-5.csv,grey paint stretched for miles around
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-7.csv,smokey fires like flame and heat
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-10.csv,dig deep in the earth for pirates gold
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-5.csv,help the woman get back to her feet
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-2.csv,it was a bad error on the part of the new judge
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-10.csv,we find joy in the simplest things
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-2.csv,mark the spot and sign a painted red
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-4.csv,the duke left the park in a civil culture
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-10.csv,that move means the game is over
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-7.csv,women form less than half of the group
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-8.csv,hemp is a weed found in parts of the tropics
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-7.csv,sweet words work better than fierce
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-8.csv,a toad and a frog are hard to tell apart
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-3.csv,they take two shares as a fair profit
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-4.csv,the clock struck to mark the third period
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-1.csv,the jacket hung on the back of the wide chair
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-7.csv,it takes heat to bring out the odor
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-4.csv,the show was a flop from the very start
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-5.csv,the glow deepened in the eyes of the sweet girl
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-10.csv,a cone costs five cents on mondays
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-2.csv,find the twin who stole the pearl necklace
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-2.csv,the crooked maze failed to fool the mouse
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-2.csv,dispense with a vest on a day like this
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-5.csv,pages bound in cloth make a book
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-7.csv,nine men were hard to dig the ruins
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-2.csv,use a pencil to write the first draft
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-5.csv,either mud or dust are found at all times
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-8.csv,the zones merge in the central part of town
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-4.csv,kick the ball straight and follow through
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-9.csv,flint splattered and lit a pintor
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-4.csv,we are sure that one war is enough
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-5.csv,breathe deep and smell the piney air
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-5.csv,the health of the sword was carved with fine designs
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-5.csv,look in the corner to find the tan shirt
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-9.csv,a waxed floor makes us lose balance
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-2.csv,the child almost hurt the small dog
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-10.csv,both lost their lives in the raging storm
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-3.csv,the man went to the woods to gather sticks
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-10.csv,a shower of dirt fell from the hot pipes
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-7.csv,a brown leather bag hung from its strap
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-4.csv,down the road is the way to the grain farmer
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-4.csv,the dirt piles were lines along the road
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-8.csv,this is a grand season for hikes on the road
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-2.csv,the beach is dry and shallow at low tide
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-5.csv,north winds bring colds and fever
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-3.csv,dill pickles are sour but taste fine
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-8.csv,a thin stripe runs down the middle
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-1.csv,nine rows of soldiers stood in line
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-9.csv,the streets are narrow and full of sharp tones
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-3.csv,the fan world is round blade softly
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-7.csv,if you numble
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-2.csv,he wrote his name boldly at the top of the sheet
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-5.csv,a saw is a tool used for making boards
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-5.csv,a small creek cut across the field
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-8.csv,jerk the rope and the bell rings weakly
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-8.csv,a shash of gold silk will trim her dress
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-1.csv,the shelves were bare of both jam or crackers
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-6.csv,it matters not if he reads these words or those
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-4.csv,they floated on the raft to sun their white backs
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-7.csv,sweet words work better than fierce its true
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-8.csv,we dont like to admit our small faults
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-8.csv,hedge apples may stain your hands green
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-3.csv,pluck the bright rose without leaves
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-6.csv,cars and buses stalled in the snowdrifts
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-4.csv,the duke left the park in a silver coach
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-6.csv,just hoist it up and take it away
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-9.csv,a dash of pepper spoils beef stew
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-10.csv,soak the cloth and drown the sharp udder
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-9.csv,help the weak to preserve their strength
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-8.csv,she was waiting at my front lawn
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-10.csv,the chair looked strong but had no bottom
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-5.csv,greet the new guests and lead quickly
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-2.csv,a rod is used to cut pink salmon
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-5.csv,keep your hat tight and the watch constant
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-7.csv,paper will dry out when wet
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-10.csv,a break in the dam almost caused a flood
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-4.csv,2 plus 7 is less than 10
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-2.csv,a lathe cuts and trims any wood
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-1.csv,the store was jammed before the sale could start
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-4.csv,split the log with a quick sharp blow
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-1.csv,we talked of the sideshow in the circus
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-1.csv,try to have the court decide the case
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-3.csv,theres a strange no theres a strong chance it will happen again no
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-9.csv,raise the sail and steer the ship northward
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-3.csv,all sat frozen and watched the screen
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-8.csv,slide the catch back and open the desk
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-9.csv,place a rosebud near the porch steps
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-1.csv,the music played on while they talked
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-7.csv,go now and come here later
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-8.csv,stop and stare at the hardworking man
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-2.csv,put the chart on the mantle and take it down
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-4.csv,take the match and strike it against your shoe
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-1.csv,the small red neon lamp went out
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-8.csv,and at night the alarms rose him from the deep sleep
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-4.csv,the red paper brightened the dim stage
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-4.csv,a cloud of dust stung his tender eyes
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-10.csv,it takes a good trap to capture a bear
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-8.csv,tea served from the brown jug is tasty
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-4.csv,the line where the edges joined was clean
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-8.csv,clothes and lodging are free to new men
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-2.csv,clams are small
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-3.csv,the bunch of grapes was pressed into wine
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-10.csv,the girl at the booth sold 50 bonds
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-9.csv,the dune rose from the edge of the water
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-6.csv,wood is best for making toys and blocks
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-3.csv,he broke his ties with groups of former friends
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-9.csv,brass rings are sold by these natives
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-8.csv,a damn strip runs down the meadow
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-4.csv,the sky that morning was clear and bright blue
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-2.csv,at that high level
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-1.csv,every word and phrase he speaks is true
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-10.csv,tight curls get limp on rainy days
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-8.csv,thick glasses helped him read the print
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-10.csv,he prods the old bule with a crooked stick
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-10.csv,a zestful food is the hot cross bun
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-7.csv,a ripe plum is fit for a kings palate
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-9.csv,soap can wash most dirt away
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-3.csv,the train brought our hero to the big town
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-9.csv,read just what the meter says
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-8.csv,our plans right now are hazy
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-4.csv,the fur of cats goes by many names
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-2.csv,he lit his coat to the tail
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-3.csv,the night shift men rate extra pay
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-5.csv,the stale smell of old beer lingers
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-6.csv,slide the bill between the two leaves
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-6.csv,he asked no person to vouch for me for him
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-10.csv,a subtle smile gets two friends
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-9.csv,the salt breeze came across from the sea
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-10.csv,port is a strong wine with a smoky taste
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-9.csv,a six comes up more often than a ten
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-8.csv,he knew the skill of the great young actress
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-4.csv,red tape bound with a small other food
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-4.csv,his hip struck the knee of the next player
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-5.csv,burn peat after the lugs give out
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-38-1.csv,it takes a lot of help to finish this
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-6.csv,sunday is the best part of the week
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-6.csv,bring your problems to the wise chief
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-5.csv,the hinge on the door creaked with old age
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-3.csv,there was a sound of dry leaves outside
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-7.csv,write a fond note to the friend you cherish
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-2.csv,he put his last cartridge into the gun and fired
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-7.csv,many hands help get the job done
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-1.csv,heave the line over the port side
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-6.csv,the wagon moved on welloiled wheels
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-1.csv,pour the stew from the pot into the plate
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-7.csv,the bombs left most of the town in ruins
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-6.csv,sever the twine with a quick snip of the knife
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-3.csv,its a dense crowd in two distinct ways
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-10.csv,lush fern grow on the lofty rocks
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-2.csv,the child crawled into the dense grass
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-3.csv,adding fast leads to wrong sums
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-6.csv,the screen before the fire kept in the sparks
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-10.csv,lush fern grow on the lofty rocks
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-5.csv,the logs fell and tumbled into the clear stream
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-6.csv,a pot of tea helps to pass the evening
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-2.csv,they are pushed back each time they attack
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-3.csv,the idea is to sew both edges straight
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-1.csv,a cramp is no small danger on a swim
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-1.csv,the bark of the pine tree was shiny and dark
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-9.csv,birth and death mark the limits of life
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-10.csv,those words were a cue for the actors to leave
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-9.csv,a rag will soak up spilled water
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-3.csv,drop the two when you add the figures
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-6.csv,when the frost has come
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-61-1.csv,a powerful fund seems to come again i plead for funds seems to come again
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-1.csv,the frosty air passed through the coat
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-3.csv,cut the cord to the bones
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-5.csv,the pot boiled
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-1.csv,a plea for funds seems to come again
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-6.csv,he ordered peach pie with ice cream
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-7.csv,some ads serve to cheat buyers
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-7.csv,the office paint was a dull
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-6.csv,the baby puts its right foot in his mouth
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-70-10.csv,the pup jerked the leash as he saw a feline shape
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-7.csv,fly by night and you waste little time
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-6.csv,when the frost has come
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-9.csv,no doubt about the way the wind blows
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-7.csv,a set of china hit the floor with a crash
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-3.csv,there is a strong chance it will happen once more
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-7.csv,march the soldiers past the next hill
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-9.csv,a gem in the rough needs work to polish
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-5.csv,an abrupt start does not win the prize
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-4.csv,the kitten chased the dog down the street
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-6.csv,try to trace the fine lines of the painting
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-6.csv,a round hole was drilled through the thin forge
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-4.csv,trumple the spark
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-5.csv,torn scraps littered the stone floor
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-5.csv,greet the new guests and leave quickly
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-3.csv,brides fell for honours main mark
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-17-4.csv,the filing case is now hard to buy
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-2.csv,a joy to every child is the swan boat
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-9.csv,quench your thirst
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-7.csv,a ridge on a smooth surface is a bump or flaw
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-6.csv,whitings are small fish caught in nets
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-36-2.csv,each penny shone like new
+bridge2ai_zipformer_full_all_tasks/mels/adult_209471_856118f3_harvard-sentences-list-24-5.csv,the map had an x that meant nothing
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-9.csv,and vent near the edge brought thin fresh air
+bridge2ai_zipformer_full_all_tasks/mels/adult_212594_a20d7db7_harvard-sentences-list-59-4.csv,drive the screw straight into the wood
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-6.csv,the desk was firm on the shaky floor
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-2.csv,he lent his coat to the tall
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-61-9.csv,a 6 comes up more often than a 10
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-56-9.csv,a white silk jacket goes with any shoes
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-6.csv,the rude laugh filled an empty room
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-1.csv,steam hissed from the broken valve
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-7.csv,i feel pretty sure the path that he took up this beach
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-8.csv,the soft cushion broke the mans fall
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-7-3.csv,he ran halfway to the hardware store
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-3.csv,the source of the huge river is the clear spring
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-2.csv,he said the same phrase 30 times
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-6.csv,shape the clay gently into block form
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-3.csv,the pennant waved when the wind blew
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-1.csv,the horse trotted around the field at a brisk pace
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-7.csv,weave the carpet on the right hand side
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-8.csv,the junkyard has a moldy smell
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-8.csv,the new girl was fired today at noon
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-2.csv,carry the pail in the wall and spill it there
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-10.csv,fill your pack with bright trinkets for the poor
+bridge2ai_zipformer_full_all_tasks/mels/adult_640250_b2093fa6_harvard-sentences-list-40-8.csv,beef is scarcer than some lamb
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-57-1.csv,painting the sockets and the walls dull green
+bridge2ai_zipformer_full_all_tasks/mels/adult_658626_2ca97998_harvard-sentences-list-6-8.csv,a cup of sugar makes sweet fudge
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-1.csv,dots of light betrayed the black cat
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-7.csv,high seats are best for football fans
+bridge2ai_zipformer_full_all_tasks/mels/adult_442297_d4585c51_harvard-sentences-list-68-5.csv,see the players scoot to third base
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-14-9.csv,we frown when events take a bad turn
+bridge2ai_zipformer_full_all_tasks/mels/adult_291813_c7ce0417_harvard-sentences-list-29-5.csv,to reach the end he needs much courage
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-1.csv,the last words were a strong statement
+bridge2ai_zipformer_full_all_tasks/mels/adult_317648_65c5b240_harvard-sentences-list-2-1.csv,the boy was there when the sun rose
+bridge2ai_zipformer_full_all_tasks/mels/adult_448911_1469f0c2_harvard-sentences-list-47-4.csv,he sent the figs
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-7.csv,the doctor cured him with these pills
+bridge2ai_zipformer_full_all_tasks/mels/adult_869633_9271a150_harvard-sentences-list-55-6.csv,the best method is to fix it in place with clips
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-10.csv,add the stores account to the last cent
+bridge2ai_zipformer_full_all_tasks/mels/adult_816597_60ef1532_harvard-sentences-list-28-6.csv,gold drizzle will halt the bond drive
+bridge2ai_zipformer_full_all_tasks/mels/adult_351231_adff7768_harvard-sentences-list-34-10.csv,code is used when secrets are sent
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_d974d6e2_harvard-sentences-list-18-9.csv,they felt gay when the ship arrived in port
+bridge2ai_zipformer_full_all_tasks/mels/adult_040138_1a5b0927_harvard-sentences-list-27-1.csv,the dark pot hung in the front closet
+bridge2ai_zipformer_full_all_tasks/mels/adult_351763_97743bbb_harvard-sentences-list-12-2.csv,leaves turn brown and yellow in the fall
