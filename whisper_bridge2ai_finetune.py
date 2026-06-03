@@ -139,6 +139,18 @@ def main() -> None:
     ap.add_argument("--warmup_steps", type=int, default=200)
     ap.add_argument("--eval_steps", type=int, default=200)
     ap.add_argument("--save_steps", type=int, default=200)
+    ap.add_argument(
+        "--save_total_limit",
+        type=int,
+        default=10,
+        help="Max checkpoints to keep (default 10; old default 3 deleted the ~22%% WER step-200 run).",
+    )
+    ap.add_argument(
+        "--load_best_model_at_end",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Reload best dev-WER checkpoint after training (default: True).",
+    )
     ap.add_argument("--logging_steps", type=int, default=50)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--fp16", action="store_true")
@@ -343,7 +355,10 @@ def main() -> None:
         logging_steps=args.logging_steps,
         eval_steps=args.eval_steps,
         save_steps=args.save_steps,
-        save_total_limit=3,
+        save_total_limit=args.save_total_limit,
+        load_best_model_at_end=bool(args.load_best_model_at_end) and not args.eval_only,
+        metric_for_best_model="wer",
+        greater_is_better=False,
         predict_with_generate=True,
         generation_max_length=225,
         report_to=["tensorboard"],
