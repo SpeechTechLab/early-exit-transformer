@@ -38,14 +38,58 @@ from util.tokenizer import *
 from util.data_loader import infer_glottal_feature_dim
 
 
+def _flatten_token_ids(ids):
+    """Turn label token ids into a flat list[int] (handles [L, 1] collate layouts)."""
+    if hasattr(ids, "detach"):
+        ids = ids.detach().cpu().tolist()
+    flat = []
+    for x in ids:
+        if isinstance(x, list):
+            flat.extend(int(v) for v in x)
+        else:
+            flat.append(int(x))
+    return flat
+
+
+def _decode_bpe_ids(args, token_ids, *, skip_special: bool) -> str:
+    """Decode BPE token ids; flatten [L, 1] layouts from collate."""
+    flat = _flatten_token_ids(token_ids)
+    if skip_special:
+        skip = {
+            int(getattr(args, "trg_pad_idx", 126)),
+            int(getattr(args, "trg_sos_idx", 1)),
+            int(getattr(args, "trg_eos_idx", 2)),
+        }
+        if hasattr(args, "sp") and args.sp is not None:
+            skip.add(int(args.sp.pad_id()))
+        flat = [i for i in flat if i not in skip]
+    if not flat:
+        return ""
+    return args.sp.decode(flat).lower()
+
+
+def _decode_reference(args, token_ids) -> str:
+    """Decode reference labels for WER / EXPECTED (skip pad/bos/eos)."""
+    if not getattr(args, "bpe", True):
+        return re.sub(r"[#^$]+", "", text_transform.int_to_text(token_ids))
+    return _decode_bpe_ids(args, token_ids, skip_special=True)
+
+
+def _label_batch_matrix(batch_labels):
+    """Normalize collate label tensor to [batch, time] before [:, 1:] shift."""
+    labels = batch_labels
+    if labels.dim() == 3 and labels.size(1) == 1:
+        labels = labels.squeeze(1)
+    return labels[:, 1:]
+
+
 def evaluate_batch_ae(args, model, batch, valid_len, split, inf, vocab):
     beam_size = int(getattr(args, "beam_size", 10))
     m = 5 / 200  # for deciding maximum length
     # p = 33 # for deciding maximum length for 5000
     p = 30  # for deciding maximum length for 256
 
-    # shift [0, 28, ..., 28, 29] -> [28, ..., 28, 29]
-    trg_expect = batch[1][:, 1:].to(args.device)
+    trg_expect = _label_batch_matrix(batch[1]).to(args.device)
 
     for spec_, v_l, trg_expect_ in zip(batch[0], valid_len, trg_expect):
 
@@ -91,11 +135,7 @@ def evaluate_batch_ctc(args, model, batch, valid_len, split, inf, vocab,
     i = 0
 
     def _sp_decode_tokens(obj) -> str:
-        # SentencePiece expects a python list[int] (or similar),
-        # but torch tensors trigger ambiguous truth-value checks.
-        if hasattr(obj, "tolist"):
-            obj = obj.detach().cpu().tolist()
-        return args.sp.decode(obj).lower()
+        return _decode_bpe_ids(args, obj, skip_special=False)
 
     for enc in encoder:
         i = i + 1
@@ -130,17 +170,11 @@ def run(args, model, data_loader, split, inf, vocab, wer_stats=None):
     for batch in data_loader:
         if batch is None:
             continue
-        # shift [0, 28, ..., 28, 29] -> [28, ..., 28, 29]
-        trg_expect = batch[1][:, 1:].to(args.device)
-        # cut [0, 28, ..., 28, 29] -> [0, 28, ..., 28]
-        # trg = batch[1][:, :-1].to(args.device)
+        trg_expect = _label_batch_matrix(batch[1]).to(args.device)
 
         batch_refs = []
         for trg_expect_ in trg_expect:
-            if args.bpe == True:
-                ref = args.sp.decode(trg_expect_.squeeze(0).tolist()).lower()
-            else:
-                ref = re.sub(r"[#^$]+", "", text_transform.int_to_text(trg_expect_.squeeze(0)))
+            ref = _decode_reference(args, trg_expect_)
             print(split, "EXPECTED:", ref)
             batch_refs.append(ref)
 
