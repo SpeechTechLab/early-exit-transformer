@@ -495,7 +495,8 @@ def get_parser():
     )
 
     parser.add_argument(
-        "--bpe_uppercase",
+        "--bpe-uppercase",
+        dest="bpe_uppercase",
         action=argparse.BooleanOptionalAction,
         default=True,
         help="""
