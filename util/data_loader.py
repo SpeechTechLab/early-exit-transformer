@@ -15,11 +15,24 @@ def _normalize_utt_id(raw_id):
     return os.path.splitext(base)[0]
 
 
-def normalize_label_for_bpe(label: str) -> str:
-    """LibriSpeech BPE expects upper-case text; Bridge2AI transcripts are lower/mixed case."""
-    text = str(label).upper()
-    text = re.sub(r"[^A-Z0-9' ]+", " ", text)
+def normalize_label_for_bpe(label: str, *, uppercase: bool = True) -> str:
+    """Normalize transcript text for SentencePiece BPE.
+
+    LibriSpeech BPE (``libri.bpe-256.model``) expects UPPERCASE.
+    SpeechTek English-EE BPE (``bpe-256.model`` on HuggingFace) expects lowercase.
+    """
+    text = str(label)
+    if uppercase:
+        text = text.upper()
+        text = re.sub(r"[^A-Z0-9' ]+", " ", text)
+    else:
+        text = text.lower()
+        text = re.sub(r"[^a-z0-9' ]+", " ", text)
     return re.sub(r"\s+", " ", text).strip()
+
+
+def normalize_label_for_bpe_args(args, label: str) -> str:
+    return normalize_label_for_bpe(label, uppercase=getattr(args, "bpe_uppercase", True))
 
 
 def _min_mel_frames(args) -> int:
@@ -588,7 +601,7 @@ class CollateFn(object):
                         # Only do this if not using precomputed features
                         pass  # ...existing code for audio feature extraction...
                     if self.args.bpe == True:
-                        bpe_label = normalize_label_for_bpe(label)
+                        bpe_label = normalize_label_for_bpe_args(self.args, label)
                         if not bpe_label:
                             print('REMOVED:', ut_id, ' LAB: (empty after BPE normalize)')
                             continue
@@ -769,7 +782,7 @@ class CollatePaddingFn(object):
                         spec = torch.cat([spec, g_rep], dim=0)
 
                     if self.args.bpe == True:
-                        bpe_label = normalize_label_for_bpe(label)
+                        bpe_label = normalize_label_for_bpe_args(self.args, label)
                         if not bpe_label:
                             print('REMOVED:', ut_id, ' LAB: (empty after BPE normalize)')
                             continue
@@ -937,7 +950,7 @@ class CollateInferFn(object):
                 spec = torch.cat([spec, g_rep], dim=0)
 
             if self.args.bpe == True:
-                bpe_label = normalize_label_for_bpe(label)
+                bpe_label = normalize_label_for_bpe_args(self.args, label)
                 if not bpe_label:
                     continue
                 tg = torch.LongTensor(

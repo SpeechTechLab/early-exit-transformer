@@ -470,6 +470,41 @@ def get_parser():
     )
 
     parser.add_argument(
+        "--sp_model_path",
+        type=str,
+        default="sentencepiece/build/libri.bpe-256.model",
+        help="""
+            SentencePiece model (.model). Use Libri ``libri.bpe-256.model`` for Zipformer
+            checkpoints; HuggingFace ``SpeechTek/English-EE-conformer`` ``bpe-256.model``
+            for the English early-exit Conformer (with ``--no-bpe-uppercase``).
+        """,
+    )
+
+    parser.add_argument(
+        "--sp_lexicon_path",
+        type=str,
+        default="sentencepiece/build/librispeech-bpe-256.lex",
+        help="CTC lexicon for BPE decoding (must match --sp_model_path).",
+    )
+
+    parser.add_argument(
+        "--sp_tokens_path",
+        type=str,
+        default="sentencepiece/build/librispeech-bpe-256.tok",
+        help="CTC token list for BPE decoding (must match --sp_model_path).",
+    )
+
+    parser.add_argument(
+        "--bpe_uppercase",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="""
+            Uppercase transcripts before BPE encode (Libri BPE default: True).
+            Use --no-bpe-uppercase with SpeechTek English-EE ``bpe-256.model``.
+        """,
+    )
+
+    parser.add_argument(
         "--lexicon_path",
         type=str,
         default="lexicon.txt",
@@ -655,15 +690,15 @@ def finalize_configured_args(args):
     conf["dec_voc_size"] = 32
     if args.bpe is True:
         conf["sp"] = spm.SentencePieceProcessor()
-        conf["sp"].load("sentencepiece/build/libri.bpe-256.model")
+        conf["sp"].load(args.sp_model_path)
         conf["src_pad_idx"] = 0
         conf["trg_pad_idx"] = 126
         conf["trg_sos_idx"] = 1
         conf["trg_eos_idx"] = 2
         conf["enc_voc_size"] = conf["sp"].get_piece_size()
         conf["dec_voc_size"] = conf["sp"].get_piece_size()
-        conf["lexicon"] = "sentencepiece/build/librispeech-bpe-256.lex"
-        conf["tokens"] = "sentencepiece/build/librispeech-bpe-256.tok"
+        conf["lexicon"] = args.sp_lexicon_path
+        conf["tokens"] = args.sp_tokens_path
     conf["inf"] = float("inf")
     return args
 
