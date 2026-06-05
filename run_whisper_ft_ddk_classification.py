@@ -49,6 +49,11 @@ def main() -> int:
     parser.add_argument("--skip_classify", action="store_true", help="Skip classify_tasks.py")
     parser.add_argument("--resume", action="store_true", help="Resume interrupted extraction")
     parser.add_argument("--max_files", type=int, default=0, help="Limit wavs per dataset (debug)")
+    parser.add_argument(
+        "--models",
+        default="rf,xgb",
+        help="Comma-separated classifiers for classify_tasks.py (default: rf,xgb)",
+    )
     args = parser.parse_args()
 
     (_REPO / "logs").mkdir(parents=True, exist_ok=True)
@@ -127,7 +132,7 @@ def main() -> int:
                 "--paper_min_sens",
                 "0.9",
                 "--models",
-                "rf,xgb",
+                str(args.models),
                 "--paper_feature_subset",
                 "whisper_plus_glottal_plus_direct",
             ],
