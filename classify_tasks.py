@@ -843,10 +843,14 @@ def build_feature_subsets(X: pd.DataFrame):
     direct_cols = []
     mfcc_cols = []
     hubert_cols = []
+    whisper_cols = []
 
     for col in X.columns:
         if col.startswith('hubert_'):
             hubert_cols.append(col)
+            continue
+        if col.startswith('whisper_'):
+            whisper_cols.append(col)
             continue
         if col.startswith('mfcc_'):
             mfcc_cols.append(col)
@@ -865,6 +869,8 @@ def build_feature_subsets(X: pd.DataFrame):
         'glottal_plus_mfcc': glottal_base_cols + mfcc_cols,
         'hubert_all': hubert_cols,
         'hubert_plus_glottal_plus_direct': hubert_cols + glottal_plus_direct_cols,
+        'whisper_all': whisper_cols,
+        'whisper_plus_glottal_plus_direct': whisper_cols + glottal_plus_direct_cols,
     }
 
     # Preserve original order from X.columns for reproducibility
@@ -1109,7 +1115,7 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
     if not summary_rows:
         print(
             "WARNING: No feature subsets produced results. "
-            "For HuBERT tables ensure columns are named hubert_0, hubert_1, ..."
+            "For SSL tables ensure columns are named hubert_0, hubert_1, ... or whisper_0, whisper_1, ..."
         )
         return
 
