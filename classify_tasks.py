@@ -655,6 +655,7 @@ def evaluate_model_with_nested_cv(
     n_inner_splits=5,
     base_random_state=42,
     outer_cv_mode: str = "sgkf",
+    grid_n_jobs: Optional[int] = None,
 ):
     metrics_template = {
         "accuracy": [],
@@ -694,17 +695,25 @@ def evaluate_model_with_nested_cv(
             outer_total = int(n_outer_splits)
         inner_cv = StratifiedGroupKFold(n_splits=n_inner_splits, shuffle=True, random_state=current_seed)
 
+        if grid_n_jobs is None:
+            grid_n_jobs = int(os.environ.get("CLASSIFY_N_JOBS", "-1"))
+
         for fold, (train_idx, test_idx) in enumerate(outer_split_iter, start=1):
             X_train, X_test = X.iloc[train_idx], X.iloc[test_idx]
             y_train, y_test = y.iloc[train_idx], y.iloc[test_idx]
             g_train, g_test = groups.iloc[train_idx], groups.iloc[test_idx]
+
+            print(
+                f"{model_name} | Fold {fold}/{outer_total} starting (grid search, n_jobs={grid_n_jobs})...",
+                flush=True,
+            )
 
             grid_search = GridSearchCV(
                 estimator=estimator,
                 param_grid=param_grid,
                 cv=inner_cv.split(X_train, y_train, g_train),
                 scoring="roc_auc",
-                n_jobs=int(os.environ.get("CLASSIFY_N_JOBS", "-1")),
+                n_jobs=grid_n_jobs,
                 verbose=0,
             )
             grid_search.fit(X_train, y_train)
@@ -801,7 +810,7 @@ def evaluate_model_with_nested_cv(
                 "paper_speaker_f1": results_speaker_paper["f1"][-1] if results_speaker_paper is not None else np.nan,
             })
 
-            print(f"{model_name} | Fold {fold}/{outer_total} complete")
+            print(f"{model_name} | Fold {fold}/{outer_total} complete", flush=True)
 
     if results_speaker_paper is not None:
         print(f"\nPaper-style speaker metrics (threshold tuned for sensitivity ≥ {paper_min_sens})")
@@ -993,6 +1002,10 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
     BASE_RANDOM_STATE = 42
 
     feature_subsets = build_feature_subsets(X)
+    only_subsets = globals().get("ONLY_FEATURE_SUBSETS", None)
+    if only_subsets:
+        allowed = {s.strip() for s in str(only_subsets).split(",") if s.strip()}
+        feature_subsets = {k: v for k, v in feature_subsets.items() if k in allowed}
 
     models_config = {}
 
@@ -1025,17 +1038,26 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
             'model_name': 'RF',
             'estimator': rf,
             'param_grid': rf_grid,
+            'grid_n_jobs': int(os.environ.get("CLASSIFY_N_JOBS", "-1")),
         }
 
     if 'xgb' in RUN_MODELS:
-        # GridSearchCV already parallelizes folds; XGB n_jobs=-1 nested inside
-        # causes CPU/memory oversubscription (swap thrashing on cluster).
-        xgb = XGBClassifier(
-            random_state=BASE_RANDOM_STATE,
-            objective='binary:logistic',
-            eval_metric='logloss',
-            n_jobs=1,
-        )
+        # GridSearchCV already parallelizes on CPU; XGB n_jobs=-1 nested inside
+        # causes oversubscription. GPU XGB uses a single device — grid_n_jobs=1.
+        xgb_device = str(globals().get("XGB_DEVICE", "cpu") or "cpu").strip().lower()
+        xgb_kwargs = {
+            "random_state": BASE_RANDOM_STATE,
+            "objective": "binary:logistic",
+            "eval_metric": "logloss",
+            "n_jobs": 1,
+        }
+        grid_n_jobs = int(os.environ.get("CLASSIFY_N_JOBS", "-1"))
+        if xgb_device in {"cuda", "gpu"}:
+            xgb_kwargs["device"] = "cuda"
+            xgb_kwargs["tree_method"] = "hist"
+            grid_n_jobs = 1
+            print("XGBoost: using GPU (device=cuda); GridSearchCV n_jobs=1", flush=True)
+        xgb = XGBClassifier(**xgb_kwargs)
         xgb_grid = {
             'n_estimators': [200, 400],
             'max_depth': [3, 5, 7],
@@ -1048,6 +1070,7 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
             'model_name': 'XGB',
             'estimator': xgb,
             'param_grid': xgb_grid,
+            'grid_n_jobs': grid_n_jobs,
         }
 
     if len(models_config) == 0:
@@ -1076,6 +1099,11 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
                 continue
 
             model_cfg = models_config[model_key]
+            print(
+                f"\n{model_cfg['model_name']}: nested CV on {subset_name} "
+                f"({len(subset_cols)} features, {len(data)} rows)...",
+                flush=True,
+            )
             model_sample, model_speaker, fold_df = evaluate_model_with_nested_cv(
                 model_name=f"{model_cfg['model_name']}-{subset_name}",
                 estimator=model_cfg['estimator'],
@@ -1088,6 +1116,7 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
                 n_inner_splits=N_INNER_SPLITS,
                 base_random_state=BASE_RANDOM_STATE,
                 outer_cv_mode=str(globals().get("OUTER_CV_MODE", "sgkf")),
+                grid_n_jobs=model_cfg.get("grid_n_jobs"),
             )
 
             summarize_metrics(f"{model_cfg['title']} [{subset_name}]", model_sample, model_speaker)
@@ -1176,6 +1205,18 @@ if __name__ == "__main__":
         help="Feature subset highlighted in the primary paper-style comparison table (default: glottal_plus_direct).",
     )
     _parser.add_argument(
+        "--only_feature_subsets",
+        type=str,
+        default="",
+        help="Comma-separated feature subsets to evaluate (default: all available, e.g. whisper_all,whisper_plus_glottal_plus_direct).",
+    )
+    _parser.add_argument(
+        "--xgb_device",
+        type=str,
+        default=os.environ.get("XGB_DEVICE", "cpu"),
+        help="XGBoost device: cpu or cuda (default: cpu). GPU uses GridSearchCV n_jobs=1.",
+    )
+    _parser.add_argument(
         "--report_from_run",
         type=str,
         default=None,
@@ -1231,6 +1272,8 @@ if __name__ == "__main__":
     globals()["TASK_SUFFIX"] = str(_args.task_suffix or "").strip()
     globals()["TASK_CONTAINS"] = str(_args.task_contains or "").strip()
     globals()["PAPER_MIN_SENS"] = _args.paper_min_sens
+    globals()["XGB_DEVICE"] = str(_args.xgb_device or "cpu").strip().lower()
+    globals()["ONLY_FEATURE_SUBSETS"] = str(_args.only_feature_subsets or "").strip() or None
 
     base_results_dir = Path("classification_results")
     base_results_dir.mkdir(parents=True, exist_ok=True)

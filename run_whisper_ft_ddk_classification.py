@@ -123,21 +123,34 @@ def main() -> int:
             "features_Czech_whisper_ft_glottal_DDK.csv",
             "features_Colombian_whisper_ft_glottal_DDK.csv",
         ]
-        _run(
-            [
-                py,
-                "classify_tasks.py",
-                "--csv",
-                *csvs,
-                "--paper_min_sens",
-                "0.9",
-                "--models",
-                str(args.models),
-                "--paper_feature_subset",
-                "whisper_plus_glottal_plus_direct",
-            ],
-            env=env,
-        )
+        classify_cmd = [
+            py,
+            "classify_tasks.py",
+            "--csv",
+            *csvs,
+            "--paper_min_sens",
+            "0.9",
+            "--models",
+            str(args.models),
+            "--paper_feature_subset",
+            "whisper_plus_glottal_plus_direct",
+            "--only_feature_subsets",
+            "whisper_all,whisper_plus_glottal_plus_direct",
+        ]
+        device = (args.device or "").strip().lower()
+        if not device:
+            try:
+                import torch
+
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+            except ImportError:
+                device = "cpu"
+        if device.startswith("cuda") and "xgb" in str(args.models).lower():
+            classify_cmd.extend(["--xgb_device", "cuda"])
+            # RF uses CPU GridSearch; keep modest parallelism. XGB uses GPU serially.
+            env.setdefault("CLASSIFY_N_JOBS", "4")
+            print("Classification: XGBoost on GPU; RF GridSearch uses CLASSIFY_N_JOBS", flush=True)
+        _run(classify_cmd, env=env)
 
     print("\nDone. Update classification_results/ddk_classifier_f1_tables.md with the new run.")
     return 0
