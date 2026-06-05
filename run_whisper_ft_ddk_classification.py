@@ -51,6 +51,10 @@ def main() -> int:
     parser.add_argument("--max_files", type=int, default=0, help="Limit wavs per dataset (debug)")
     args = parser.parse_args()
 
+    (_REPO / "logs").mkdir(parents=True, exist_ok=True)
+    (_REPO / ".hf_cache").mkdir(parents=True, exist_ok=True)
+    (_REPO / ".mpl_cache").mkdir(parents=True, exist_ok=True)
+
     ckpt = (_REPO / args.checkpoint).resolve() if not Path(args.checkpoint).is_absolute() else Path(args.checkpoint)
     if not ckpt.is_dir():
         print(
