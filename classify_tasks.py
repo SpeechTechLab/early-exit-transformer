@@ -1028,11 +1028,13 @@ def run_classification_for_task(csv_file, run_output_dir: Path):
         }
 
     if 'xgb' in RUN_MODELS:
+        # GridSearchCV already parallelizes folds; XGB n_jobs=-1 nested inside
+        # causes CPU/memory oversubscription (swap thrashing on cluster).
         xgb = XGBClassifier(
             random_state=BASE_RANDOM_STATE,
             objective='binary:logistic',
             eval_metric='logloss',
-            n_jobs=-1,
+            n_jobs=1,
         )
         xgb_grid = {
             'n_estimators': [200, 400],
