@@ -63,11 +63,14 @@ def extract_dataset(
     resume: bool = False,
     shuffle: bool = False,
     seed: int = 42,
+    ddk_only: bool = False,
 ) -> None:
     meta = _load_speaker_metadata(spec.metadata_csv)
     meta = meta.set_index("speaker_id", drop=False)
 
     wavs = list(spec.root_dir.rglob("*.wav"))
+    if ddk_only:
+        wavs = [w for w in wavs if "ddk" in [p.lower() for p in w.parts]]
     wavs = sorted(wavs)
     if shuffle:
         rng = random.Random(int(seed))
@@ -115,6 +118,11 @@ def main() -> None:
     parser.add_argument("--shuffle", action="store_true")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--out_dir", default=".")
+    parser.add_argument(
+        "--ddk_only",
+        action="store_true",
+        help="Only process wavs under a ddk/ subdirectory (skip read/vowel)",
+    )
     args = parser.parse_args()
 
     out_dir = Path(args.out_dir)
@@ -126,7 +134,8 @@ def main() -> None:
     targets = ["German", "Czech"] if args.dataset == "both" else [args.dataset]
     for ds in targets:
         spec = specs[ds]
-        out_csv = out_dir / f"features_{ds}_hubert.csv"
+        suffix = "_DDK" if args.ddk_only else ""
+        out_csv = out_dir / f"features_{ds}_hubert{suffix}.csv"
         extract_dataset(
             spec=spec,
             output_csv=out_csv,
@@ -139,6 +148,7 @@ def main() -> None:
             resume=args.resume,
             shuffle=args.shuffle,
             seed=args.seed,
+            ddk_only=bool(args.ddk_only),
         )
 
 
