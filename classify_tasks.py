@@ -880,6 +880,9 @@ def build_feature_subsets(X: pd.DataFrame):
         'hubert_plus_glottal_plus_direct': hubert_cols + glottal_plus_direct_cols,
         'whisper_all': whisper_cols,
         'whisper_plus_glottal_plus_direct': whisper_cols + glottal_plus_direct_cols,
+        'hubert_plus_whisper_plus_glottal_plus_direct': (
+            hubert_cols + whisper_cols + glottal_plus_direct_cols
+        ),
     }
 
     # Preserve original order from X.columns for reproducibility
