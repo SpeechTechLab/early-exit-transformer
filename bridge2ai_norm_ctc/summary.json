@@ -1,0 +1,10 @@
+{
+  "train_manifest": "/Users/ipatsoura/Downloads/train.norm.txt",
+  "output_dir": "/Users/ipatsoura/early-exit-transformer/bridge2ai_norm_ctc",
+  "wav_dir": "/Users/ipatsoura/early-exit-transformer/bridge2ai_norm_ctc/wav",
+  "jsonl_dir": "/Users/ipatsoura/early-exit-transformer/bridge2ai_norm_ctc/jsonl",
+  "train_utts": 22881,
+  "dev_utts": 3846,
+  "test_utts": 6100,
+  "mode": "symlink"
+}

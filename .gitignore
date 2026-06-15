@@ -4,6 +4,8 @@ __pycache__/
 
 # Command scripts (keep local)
 *.sh
+!scripts/
+!scripts/*.sh
 
 # Data
 LibriSpeech/
@@ -55,6 +57,13 @@ trained_model*/
 
 # Whisper fine-tuning outputs
 whisper_runs/
+whisper_ctc_runs/
+
+# Bridge2AI NORM CTC prep (symlinks + jsonl regenerated on cluster)
+bridge2ai_norm_ctc/wav/
+bridge2ai_norm_ctc/jsonl/
+!bridge2ai_norm_ctc/manifests/
+!bridge2ai_norm_ctc/manifests/*.txt
 
 # Generic logs / predictions
 *.log
