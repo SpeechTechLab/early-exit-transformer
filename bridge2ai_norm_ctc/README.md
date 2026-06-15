@@ -21,24 +21,67 @@ python3 prepare_bridge2ai_norm_ctc_data.py \
 
 Use `--copy` if you need real files for `tar`/`rsync` to the cluster (symlinks break when copied naively).
 
+## Cluster: copy wavs first (required)
+
+The cluster usually has **mels** but not the full **wav** trees. If `prepare_bridge2ai_norm_ctc_data.py` reports thousands of missing wavs and only ~900 train utts, copy wavs from your Mac first.
+
+**On Mac** (repo root, wavs under `bridge2ai_adult_wav_v2/` and `bridge2ai_pediatric_wav_v2/`):
+
+```bash
+cd /Users/ipatsoura/early-exit-transformer
+python3 export_norm_ctc_wav_paths.py   # writes bridge2ai_norm_ctc/manifests/norm_ctc_wav_paths.txt
+
+COPYFILE_DISABLE=1 tar czf - -T bridge2ai_norm_ctc/manifests/norm_ctc_wav_paths.txt \
+  | ssh -J ipatsoura@jumpsso.fbk.eu stek@digis-rf4421.fbk.eu \
+    'docker exec -i ee-ipatsoura-stek-4 tar -xzf - -C /stek/patsoura/early-exit-transformer'
+```
+
+Expect **~32k wav files** (~several GB). After transfer, on the cluster:
+
+```bash
+cd /stek/patsoura/early-exit-transformer
+python3 prepare_bridge2ai_norm_ctc_data.py \
+  --train-manifest bridge2ai_norm_ctc/manifests/train.norm.txt \
+  --output-dir bridge2ai_norm_ctc
+# expect: train_utts 22881, dev_utts 3846, test_utts 6100
+```
+
 ## Cluster: Whisper CTC fine-tune (SLAM-LLM)
 
 ### 1. Pull repo + copy SLAM-LLM
 
 ```bash
 cd /stek/patsoura/early-exit-transformer
-git pull origin irene/ee-ipatsoura-stek-1   # after push
-
-# One-time: place Venkatesh's SLAM-LLM checkout
-# (or rsync from Mac Downloads/SLAM-LLM-main)
-export SLAM_LLM_ROOT=/stek/patsoura/SLAM-LLM-main
-pip install -e "$SLAM_LLM_ROOT"
-pip install openai-whisper evaluate
+git pull origin irene/ee-ipatsoura-stek-1
 ```
 
-Ensure `bridge2ai_adult_wav_v2/` and `bridge2ai_pediatric_wav_v2/` exist on the cluster (same as Whisper CE fine-tune).
+**SLAM-LLM is not in this repo.** Copy it once from your Mac (path must exist before `pip install -e`):
 
-If `bridge2ai_norm_ctc/` is missing, run on cluster:
+```bash
+# On Mac:
+rsync -avz -e "ssh -J ipatsoura@jumpsso.fbk.eu" \
+  /Users/ipatsoura/Downloads/SLAM-LLM-main/ \
+  stek@digis-rf4421.fbk.eu:/stek/patsoura/SLAM-LLM-main/
+```
+
+**Inside the container:**
+
+```bash
+export SLAM_LLM_ROOT=/stek/patsoura/SLAM-LLM-main
+ls "$SLAM_LLM_ROOT/pyproject.toml"   # must exist
+
+cd "$SLAM_LLM_ROOT"
+pip install -e .
+pip install openai-whisper evaluate
+
+# or without editable install:
+# pip install -r requirements.txt openai-whisper evaluate
+# export PYTHONPATH="$SLAM_LLM_ROOT/src:$SLAM_LLM_ROOT:$PYTHONPATH"
+```
+
+Ensure `bridge2ai_adult_wav_v2/` and `bridge2ai_pediatric_wav_v2/` exist on the cluster (see wav copy section above).
+
+If `bridge2ai_norm_ctc/jsonl/` is missing after wav copy, run on cluster:
 
 ```bash
 python3 prepare_bridge2ai_norm_ctc_data.py \
