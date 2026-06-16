@@ -19,6 +19,7 @@ LANG_LABEL = {"CZ": "cz", "DE": "de", "ES": "co"}
 MODEL_ORDER = [("rf", "Random Forest"), ("xgb", "XGBoost")]
 LATEX_COLUMNS = [
     "H", "W", "W-FT", "W-CTC", "G", "H+G", "W+G", "W-FT+G", "W-CTC+G", "H+W-FT+G",
+    "LF-H+W+G", "LF-H+W-FT+G", "LF-H+W-CTC+G",
 ]
 
 # IEEE two-column papers: wide tables must use table* + \textwidth, not table + \columnwidth.
@@ -95,6 +96,9 @@ COLUMNS = [
         "hubert_plus_whisper_plus_glottal_plus_direct",
         csv_match="hubert_whisper_ft_glottal_DDK",
     ),
+    ColumnSpec("LF-H+W+G", "run_late_fusion_ddk", "LF-H+W+G"),
+    ColumnSpec("LF-H+W-FT+G", "run_late_fusion_ddk", "LF-H+W-FT+G"),
+    ColumnSpec("LF-H+W-CTC+G", "run_late_fusion_ddk", "LF-H+W-CTC+G"),
 ]
 
 METRIC_CHOICES = {
