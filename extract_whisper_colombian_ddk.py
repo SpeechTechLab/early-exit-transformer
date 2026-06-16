@@ -42,6 +42,8 @@ def main() -> None:
     )
     parser.add_argument("--model_id", default="openai/whisper-large-v3")
     parser.add_argument("--local_model_dir", default="")
+    parser.add_argument("--ctc_checkpoint", default="")
+    parser.add_argument("--ctc_encoder_name", default="large-v3-turbo")
     parser.add_argument("--device", default="")
     parser.add_argument("--pool", choices=["mean", "mean_std"], default="mean")
     parser.add_argument("--max_files", type=int, default=0)
@@ -73,6 +75,8 @@ def main() -> None:
         metadata_fn,
         model_id=args.model_id,
         local_model_dir=args.local_model_dir or None,
+        ctc_checkpoint=args.ctc_checkpoint or None,
+        ctc_encoder_name=args.ctc_encoder_name,
         device=args.device or None,
         pool=args.pool,
         save_every=int(args.save_every),

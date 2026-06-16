@@ -204,6 +204,24 @@ DEFAULT_TRIPLE_DDK_FT_PAIRS: list[tuple[str, str, str, str]] = [
     ),
 ]
 
+DEFAULT_WHISPER_CTC_PAIRS: list[tuple[str, str, str]] = [
+    (
+        "features_Czech_whisper_ctc_DDK.csv",
+        "features_Czech_QCP_python_DDK.csv",
+        "features_Czech_whisper_ctc_glottal_DDK.csv",
+    ),
+    (
+        "features_German_whisper_ctc_DDK.csv",
+        "features_German_QCP_python_DDK.csv",
+        "features_German_whisper_ctc_glottal_DDK.csv",
+    ),
+    (
+        "features_Colombian_whisper_ctc_DDK.csv",
+        "features_Colombian_QCP_python_DDK.csv",
+        "features_Colombian_whisper_ctc_glottal_DDK.csv",
+    ),
+]
+
 DEFAULT_WHISPER_FT_PAIRS: list[tuple[str, str, str]] = [
     (
         "features_Czech_whisper_ft_DDK.csv",
@@ -250,6 +268,11 @@ def main() -> None:
         help="Merge all standard Whisper finetuned DDK pairs (see DEFAULT_WHISPER_FT_PAIRS)",
     )
     parser.add_argument(
+        "--whisper_ctc_defaults",
+        action="store_true",
+        help="Merge all standard Whisper CTC-finetuned DDK pairs (see DEFAULT_WHISPER_CTC_PAIRS)",
+    )
+    parser.add_argument(
         "--triple",
         nargs=4,
         action="append",
@@ -280,6 +303,7 @@ def main() -> None:
         not pairs
         and not args.whisper_defaults
         and not args.whisper_ft_defaults
+        and not args.whisper_ctc_defaults
         and not triples
         and not args.triple_defaults
         and not args.triple_ft_defaults
@@ -290,6 +314,9 @@ def main() -> None:
         ssl_prefix = "whisper"
     if args.whisper_ft_defaults:
         pairs.extend(DEFAULT_WHISPER_FT_PAIRS)
+        ssl_prefix = "whisper"
+    if args.whisper_ctc_defaults:
+        pairs.extend(DEFAULT_WHISPER_CTC_PAIRS)
         ssl_prefix = "whisper"
     if args.triple_defaults:
         triples.extend(DEFAULT_TRIPLE_DDK_PAIRS)

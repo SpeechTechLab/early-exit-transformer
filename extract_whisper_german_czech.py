@@ -64,6 +64,8 @@ def extract_dataset(
     shuffle: bool = False,
     seed: int = 42,
     ddk_only: bool = False,
+    ctc_checkpoint: str | None = None,
+    ctc_encoder_name: str = "large-v3-turbo",
 ) -> None:
     meta = _load_speaker_metadata(spec.metadata_csv)
     meta = meta.set_index("speaker_id", drop=False)
@@ -98,6 +100,8 @@ def extract_dataset(
         metadata_fn,
         model_id=model_id,
         local_model_dir=local_model_dir,
+        ctc_checkpoint=ctc_checkpoint,
+        ctc_encoder_name=ctc_encoder_name,
         device=device,
         pool=pool,
         save_every=save_every,
@@ -112,6 +116,12 @@ def main() -> None:
     parser.add_argument("--dataset", choices=["German", "Czech", "both"], default="both")
     parser.add_argument("--model_id", default="openai/whisper-large-v3")
     parser.add_argument("--local_model_dir", default="", help="Optional local model directory")
+    parser.add_argument(
+        "--ctc_checkpoint",
+        default="",
+        help="SLAM-LLM Whisper CTC .pth (mutually exclusive with --local_model_dir for finetune)",
+    )
+    parser.add_argument("--ctc_encoder_name", default="large-v3-turbo")
     parser.add_argument("--device", default="")
     parser.add_argument("--pool", choices=["mean", "mean_std"], default="mean")
     parser.add_argument("--max_files", type=int, default=0)
@@ -157,6 +167,8 @@ def main() -> None:
             shuffle=args.shuffle,
             seed=args.seed,
             ddk_only=bool(args.ddk_only),
+            ctc_checkpoint=args.ctc_checkpoint or None,
+            ctc_encoder_name=args.ctc_encoder_name,
         )
 
 

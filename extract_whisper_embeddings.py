@@ -25,6 +25,11 @@ except ImportError:  # pragma: no cover
 
 DEFAULT_MODEL_ID = "openai/whisper-large-v3"
 DEFAULT_FT_CHECKPOINT = "whisper_runs/bridge2ai_read_clean_short_en_ft_v2/checkpoint-150"
+DEFAULT_CTC_CHECKPOINT = (
+    "whisper_ctc_runs/bridge2ai_norm_partial_unfreeze/whisper_ctc_partial_unfreeze.pth"
+)
+DEFAULT_CTC_ENCODER_NAME = "large-v3-turbo"
+CTC_MEL_BINS = 128
 WHISPER_SAMPLE_RATE = 16000
 _REPO_ROOT = Path(__file__).resolve().parent
 os.environ.setdefault("HF_HOME", str(_REPO_ROOT / ".hf_cache"))
@@ -45,6 +50,64 @@ def _checkpoint_architecture(checkpoint_dir: Path) -> str:
     cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
     archs = cfg.get("architectures") or []
     return str(archs[0]) if archs else ""
+
+
+def _inject_whisper_encoder_extract(encoder) -> None:
+    """Match SLAM-LLM ``WhisperWrappedEncoder.extract_variable_length_features``."""
+    import types
+
+    import torch.nn.functional as F
+
+    def extract_variable_length_features(self, x: torch.Tensor) -> torch.Tensor:
+        x = F.gelu(self.conv1(x))
+        x = F.gelu(self.conv2(x))
+        x = x.permute(0, 2, 1)
+        x = (x + self.positional_embedding[: x.shape[1]]).to(x.dtype)
+        for block in self.blocks:
+            x = block(x)
+        return self.ln_post(x)
+
+    encoder.extract_variable_length_features = types.MethodType(
+        extract_variable_length_features, encoder
+    )
+
+
+def load_whisper_ctc_encoder(
+    checkpoint_path: str | Path,
+    *,
+    encoder_name: str = DEFAULT_CTC_ENCODER_NAME,
+    device: Optional[str] = None,
+) -> tuple[torch.nn.Module, str]:
+    """Load CTC-finetuned OpenAI Whisper encoder from SLAM-LLM ``.pth`` checkpoint."""
+    import whisper
+
+    dev = resolve_device(device)
+    ckpt = Path(checkpoint_path)
+    if not ckpt.is_file():
+        raise FileNotFoundError(f"Whisper CTC checkpoint not found: {ckpt}")
+
+    encoder = whisper.load_model(encoder_name, device="cpu").encoder
+    _inject_whisper_encoder_extract(encoder)
+
+    try:
+        state = torch.load(ckpt, map_location="cpu", weights_only=False)
+    except TypeError:
+        state = torch.load(ckpt, map_location="cpu")
+    enc_state = {
+        k[len("encoder.") :]: v for k, v in state.items() if k.startswith("encoder.")
+    }
+    if not enc_state:
+        raise RuntimeError(f"No encoder.* weights in CTC checkpoint: {ckpt}")
+
+    missing, unexpected = encoder.load_state_dict(enc_state, strict=False)
+    if missing:
+        raise RuntimeError(f"CTC encoder load missing keys: {missing[:5]}")
+    if unexpected:
+        print(f"[warn] CTC encoder ignored unexpected keys: {unexpected[:5]}")
+
+    encoder = encoder.to(dev).eval()
+    print(f"Loaded Whisper CTC encoder from {ckpt} ({encoder_name}) on {dev}")
+    return encoder, dev
 
 
 def load_whisper(
@@ -143,6 +206,24 @@ def extract_embedding_from_audio(
     return _pool_hidden_states(hidden, pool)
 
 
+def extract_embedding_from_audio_ctc(
+    encoder: torch.nn.Module,
+    audio: np.ndarray,
+    *,
+    device: str,
+    pool: str = "mean",
+    n_mels: int = CTC_MEL_BINS,
+) -> Optional[np.ndarray]:
+    """Extract embeddings with the OpenAI-Whisper mel frontend used in CTC training."""
+    import whisper
+
+    audio = whisper.pad_or_trim(np.asarray(audio, dtype=np.float32))
+    mel = whisper.log_mel_spectrogram(audio, n_mels=n_mels).unsqueeze(0).to(device)
+    with torch.no_grad():
+        hidden = encoder.extract_variable_length_features(mel)
+    return _pool_hidden_states(hidden, pool)
+
+
 def embedding_dict_from_vector(embedding: np.ndarray, prefix: str = "whisper") -> dict[str, float]:
     return {f"{prefix}_{i}": float(v) for i, v in enumerate(np.asarray(embedding, dtype=np.float32))}
 
@@ -150,23 +231,31 @@ def embedding_dict_from_vector(embedding: np.ndarray, prefix: str = "whisper") -
 def extract_file_whisper(
     file_path: str | Path,
     model: torch.nn.Module,
-    processor: WhisperFeatureExtractor,
+    processor: WhisperFeatureExtractor | None,
     *,
     device: str,
     pool: str = "mean",
+    ctc_encoder: torch.nn.Module | None = None,
 ) -> Optional[dict[str, float]]:
     audio, sr = load_audio_for_whisper(file_path)
     if audio is None or sr is None:
         return None
 
-    embedding = extract_embedding_from_audio(
-        model,
-        processor,
-        audio,
-        sr,
-        device=device,
-        pool=pool,
-    )
+    if ctc_encoder is not None:
+        embedding = extract_embedding_from_audio_ctc(
+            ctc_encoder, audio, device=device, pool=pool
+        )
+    else:
+        if processor is None:
+            raise ValueError("processor is required when ctc_encoder is not set")
+        embedding = extract_embedding_from_audio(
+            model,
+            processor,
+            audio,
+            sr,
+            device=device,
+            pool=pool,
+        )
     if embedding is None:
         return None
     return embedding_dict_from_vector(embedding)
@@ -187,6 +276,8 @@ def run_extraction(
     *,
     model_id: str = DEFAULT_MODEL_ID,
     local_model_dir: Optional[str] = None,
+    ctc_checkpoint: Optional[str] = None,
+    ctc_encoder_name: str = DEFAULT_CTC_ENCODER_NAME,
     device: Optional[str] = None,
     pool: str = "mean",
     save_every: int = 50,
@@ -209,12 +300,24 @@ def run_extraction(
         except Exception as exc:
             print(f"Warning: could not resume from {output_csv}: {exc}")
 
-    print(f"Loading Whisper from {local_model_dir or model_id} ...")
-    model, processor, dev = load_whisper(
-        model_id=model_id,
-        device=device,
-        local_model_dir=local_model_dir,
-    )
+    model = None
+    processor = None
+    ctc_encoder = None
+    if ctc_checkpoint:
+        print(f"Loading Whisper CTC encoder from {ctc_checkpoint} ...")
+        ctc_encoder, dev = load_whisper_ctc_encoder(
+            ctc_checkpoint,
+            encoder_name=ctc_encoder_name,
+            device=device,
+        )
+        model = ctc_encoder
+    else:
+        print(f"Loading Whisper from {local_model_dir or model_id} ...")
+        model, processor, dev = load_whisper(
+            model_id=model_id,
+            device=device,
+            local_model_dir=local_model_dir,
+        )
     print(f"Model ready on {dev} | pool={pool} | files={len(wav_paths)}")
 
     for idx, wav in enumerate(wav_paths, start=1):
@@ -227,7 +330,14 @@ def run_extraction(
             f"speaker={meta.get('speaker', '?')} label={meta.get('label', '?')} task={meta.get('task', '?')}"
         )
 
-        feat = extract_file_whisper(wav, model, processor, device=dev, pool=pool)
+        feat = extract_file_whisper(
+            wav,
+            model,
+            processor,
+            device=dev,
+            pool=pool,
+            ctc_encoder=ctc_encoder,
+        )
         if feat is None:
             continue
 
@@ -264,6 +374,16 @@ def main() -> None:
         default="",
         help="Optional local directory from huggingface-cli download",
     )
+    parser.add_argument(
+        "--ctc_checkpoint",
+        default="",
+        help="SLAM-LLM Whisper CTC .pth (uses OpenAI-Whisper 128-mel frontend)",
+    )
+    parser.add_argument(
+        "--ctc_encoder_name",
+        default=DEFAULT_CTC_ENCODER_NAME,
+        help="OpenAI Whisper architecture name for CTC checkpoint",
+    )
     parser.add_argument("--device", default="", help="Torch device (default: cuda if available)")
     parser.add_argument(
         "--pool",
@@ -292,6 +412,8 @@ def main() -> None:
         _default_meta,
         model_id=args.model_id,
         local_model_dir=args.local_model_dir or None,
+        ctc_checkpoint=args.ctc_checkpoint or None,
+        ctc_encoder_name=args.ctc_encoder_name,
         device=args.device or None,
         pool=args.pool,
         save_every=int(args.save_every),
