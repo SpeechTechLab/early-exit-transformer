@@ -33,10 +33,18 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = REPO_ROOT / "classification_results" / "whisper_en_asr_test"
 TEST_MANIFEST = REPO_ROOT / "bridge2ai_zipformer_full_all_tasks/manifests/clean_short_en/read_test.txt"
 SUBSET_META = REPO_ROOT / "bridge2ai_zipformer_full_all_tasks/subset_meta.tsv"
+DEFAULT_MODEL_ID = "openai/whisper-large-v3"
 DEFAULT_CE_CKPT = REPO_ROOT / "whisper_runs/bridge2ai_read_clean_short_en_ft_v2/checkpoint-150"
 DEFAULT_CTC_CKPT = (
     REPO_ROOT / "whisper_ctc_runs/bridge2ai_norm_partial_unfreeze/whisper_ctc_partial_unfreeze.pth"
 )
+
+
+def _whisper_processor_source(checkpoint: Path, base_model_id: str) -> str:
+    """HF Trainer checkpoints may omit tokenizer files; fall back to base model."""
+    has_preproc = (checkpoint / "preprocessor_config.json").is_file()
+    has_tok = (checkpoint / "tokenizer.json").is_file() or (checkpoint / "vocab.json").is_file()
+    return str(checkpoint) if has_preproc and has_tok else base_model_id
 
 
 def normalize_text(text: str) -> str:
@@ -133,7 +141,13 @@ def compute_wer(refs: list[str], hyps: list[str]) -> float:
     return float(wer.compute(predictions=hyps, references=refs))
 
 
-def run_ce_decode(records: list[dict], checkpoint: Path, batch_size: int) -> list[dict]:
+def run_ce_decode(
+    records: list[dict],
+    checkpoint: Path,
+    batch_size: int,
+    *,
+    base_model_id: str = DEFAULT_MODEL_ID,
+) -> list[dict]:
     import torch
     import torchaudio
     from transformers import WhisperForConditionalGeneration, WhisperProcessor
@@ -143,7 +157,10 @@ def run_ce_decode(records: list[dict], checkpoint: Path, batch_size: int) -> lis
         raise SystemExit(f"CE checkpoint not found: {ckpt}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    processor = WhisperProcessor.from_pretrained(str(ckpt))
+    proc_src = _whisper_processor_source(ckpt, base_model_id)
+    if proc_src != str(ckpt):
+        print(f"[info] CE processor from {proc_src} (checkpoint has no tokenizer)", flush=True)
+    processor = WhisperProcessor.from_pretrained(proc_src)
     model = WhisperForConditionalGeneration.from_pretrained(str(ckpt)).to(device).eval()
     try:
         model.generation_config.forced_decoder_ids = processor.get_decoder_prompt_ids(
@@ -275,6 +292,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--ce-checkpoint", type=Path, default=None)
     parser.add_argument("--ctc-checkpoint", type=Path, default=None)
+    parser.add_argument("--model-id", default=DEFAULT_MODEL_ID, help="Base Whisper id for processor fallback")
     parser.add_argument("--ce-batch-size", type=int, default=4)
     parser.add_argument("--ctc-batch-size", type=int, default=8)
     parser.add_argument(
@@ -318,7 +336,7 @@ def main() -> int:
 
     if run_ce:
         print(f"\nCE decode: {ce_ckpt}", flush=True)
-        ce_out = run_ce_decode(records, ce_ckpt, args.ce_batch_size)
+        ce_out = run_ce_decode(records, ce_ckpt, args.ce_batch_size, base_model_id=args.model_id)
         ce_tsv = OUT_DIR / "ce_matched_test_ref_hyp.tsv"
         write_ref_hyp_tsv(ce_out, ce_tsv, "cross_entropy")
         ce_wer = compute_wer([r["reference"] for r in ce_out], [r["hypothesis"] for r in ce_out])

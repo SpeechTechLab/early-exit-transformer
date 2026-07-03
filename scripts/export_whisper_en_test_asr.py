@@ -36,6 +36,13 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = REPO_ROOT / "classification_results" / "whisper_en_asr_test"
+DEFAULT_MODEL_ID = "openai/whisper-large-v3"
+
+
+def _whisper_processor_source(checkpoint: Path, base_model_id: str) -> str:
+    has_preproc = (checkpoint / "preprocessor_config.json").is_file()
+    has_tok = (checkpoint / "tokenizer.json").is_file() or (checkpoint / "vocab.json").is_file()
+    return str(checkpoint) if has_preproc and has_tok else base_model_id
 
 CE_TEST_MANIFEST = REPO_ROOT / "bridge2ai_zipformer_full_all_tasks/manifests/clean_short_en/read_test.txt"
 SUBSET_META = REPO_ROOT / "bridge2ai_zipformer_full_all_tasks/subset_meta.tsv"
@@ -174,10 +181,15 @@ def write_split(records: list[dict], stem: str) -> None:
     print(f"Wrote {jsonl_path}")
 
 
-def run_ce_hypotheses(checkpoint: Path, records: list[dict], batch_size: int) -> list[dict]:
+def run_ce_hypotheses(
+    checkpoint: Path,
+    records: list[dict],
+    batch_size: int,
+    *,
+    base_model_id: str = DEFAULT_MODEL_ID,
+) -> list[dict]:
     """Decode CE checkpoint on CE test wavs; fill hypothesis field."""
     try:
-        import numpy as np
         import torch
         import torchaudio
         from transformers import WhisperForConditionalGeneration, WhisperProcessor
@@ -189,7 +201,8 @@ def run_ce_hypotheses(checkpoint: Path, records: list[dict], batch_size: int) ->
         raise SystemExit(f"CE checkpoint not found: {ckpt}")
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    processor = WhisperProcessor.from_pretrained(str(ckpt))
+    proc_src = _whisper_processor_source(ckpt, base_model_id)
+    processor = WhisperProcessor.from_pretrained(proc_src)
     model = WhisperForConditionalGeneration.from_pretrained(str(ckpt)).to(device)
     model.eval()
     try:
