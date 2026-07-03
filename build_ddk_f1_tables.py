@@ -18,8 +18,27 @@ LANG_LATEX = {"CZ": "Czech (CZ)", "DE": "German (DE)", "ES": "Colombian (CO)"}
 LANG_LABEL = {"CZ": "cz", "DE": "de", "ES": "co"}
 MODEL_ORDER = [("rf", "Random Forest"), ("xgb", "XGBoost")]
 LATEX_COLUMNS = [
-    "H", "W", "W-FT", "W-CTC", "G", "H+G", "W+G", "W-FT+G", "W-CTC+G", "H+W-FT+G",
+    "H", "W", "W-FT", "W-CTC", "G", "H+G", "W+G", "W-FT+G", "W-CTC+G", "H+W+G", "H+W-FT+G",
     "LF-H+W+G", "LF-H+W-FT+G", "LF-H+W-CTC+G",
+]
+
+FUSION_COMPARE_LATEX = ["H+W+G", "H+W-FT+G", "LF-H+W+G", "LF-H+W-FT+G"]
+
+DECIMAL_PLACES = 2
+
+LANG_COLOR = {"CZ": "red", "DE": "purple", "ES": "blue"}
+LANG_HEADER = {"CZ": "CZECH", "DE": "GERMAN", "ES": "SPANISH"}
+
+# Utterance-level summary tables (column label, COLUMNS index)
+SUMMARY_SINGLE_COLS = [("H", 0), ("W", 1), ("G", 4)]
+SUMMARY_HW_G_COLS = [("H", 0), ("W", 1), ("H+G", 5), ("W+G", 6)]
+SUMMARY_FUSION_COLS = [("H+W+G", 9), ("LF-H+W+G", 11)]
+SUMMARY_WHISPER_FT_COLS = [("W", 1), ("W-CE", 2), ("W-CTC", 3)]
+
+SUMMARY_METRIC_ROWS = [
+    ("F1", "sample_f1_mean", "sample_f1_std"),
+    ("Acc", "sample_accuracy_mean", "sample_accuracy_std"),
+    ("AUC", "sample_auc_mean", "sample_auc_std"),
 ]
 
 # IEEE two-column papers: wide tables must use table* + \textwidth, not table + \columnwidth.
@@ -55,7 +74,7 @@ COLUMNS = [
     ),
     ColumnSpec(
         "Whisper (CTC fine-tuned)",
-        "run_whisper_ctc_ddk",
+        "whisper_ctc_ddk",
         "whisper_all",
         csv_match="whisper_ctc_DDK",
         csv_exclude="glottal",
@@ -86,12 +105,19 @@ COLUMNS = [
     ),
     ColumnSpec(
         "Whisper (CTC fine-tuned) + glottal",
-        "run_whisper_ctc_ddk",
+        "whisper_ctc_ddk",
         "whisper_plus_glottal_plus_direct",
         csv_match="whisper_ctc_glottal_DDK",
     ),
     ColumnSpec(
-        "HuBERT + Whisper + glottal",
+        "HuBERT + Whisper + glottal (frozen Whisper)",
+        "run_hwg_ddk",
+        "hubert_plus_whisper_plus_glottal_plus_direct",
+        csv_match="hubert_whisper_glottal_DDK",
+        csv_exclude="whisper_ft",
+    ),
+    ColumnSpec(
+        "HuBERT + Whisper-FT + glottal",
         "run_20260607_130745",
         "hubert_plus_whisper_plus_glottal_plus_direct",
         csv_match="hubert_whisper_ft_glottal_DDK",
@@ -149,8 +175,12 @@ def _pick_row(df: pd.DataFrame, spec: ColumnSpec, language: str, model: str) -> 
     return rows.iloc[0]
 
 
+def _num_fmt(value: float) -> str:
+    return f"{value:.{DECIMAL_PLACES}f}"
+
+
 def _fmt(mean: float, std: float) -> str:
-    return f"{mean:.3f}±{std:.3f}"
+    return f"{_num_fmt(mean)}±{_num_fmt(std)}"
 
 
 def _bold_if_best(text: str, mean: float, best_mean: float) -> str:
@@ -162,8 +192,28 @@ def _bold_if_best(text: str, mean: float, best_mean: float) -> str:
 def _latex_cell(mean: Optional[float], std: Optional[float], bold: bool) -> str:
     if mean is None or std is None:
         return "---"
-    body = f"{mean:.3f}$\\pm${std:.3f}"
+    body = f"{_num_fmt(mean)}$\\pm${_num_fmt(std)}"
     return f"\\textbf{{{body}}}" if bold else body
+
+
+def _latex_summary_cell(
+    mean: Optional[float],
+    std: Optional[float],
+    bold: bool,
+    lang: Optional[str] = None,
+    emph: bool = False,
+) -> str:
+    if mean is None or std is None:
+        return "---"
+    m = _num_fmt(mean)
+    s = _num_fmt(std)
+    if bold and lang:
+        body = f"\\textbf{{\\color{{{LANG_COLOR[lang]}}}{{{m}}}}}$\\pm${s}"
+    elif bold:
+        body = f"\\textbf{{{m}$\\pm${s}}}"
+    else:
+        body = f"{m}$\\pm${s}"
+    return f"\\emph{{{body}}}" if emph else body
 
 
 def build_table(language: str, metric: str) -> tuple[list[str], list[list[str]]]:
@@ -409,7 +459,292 @@ def render_markdown(metric: str, dual: bool = False) -> str:
     return "\n".join(parts)
 
 
-def render_latex(metric: str, dual: bool = False) -> str:
+def _column_indices(labels: list[str]) -> list[int]:
+    return [i for i, spec in enumerate(COLUMNS) if LATEX_COLUMNS[i] in labels]
+
+
+def build_latex_fusion_compare_table(language: str) -> str:
+    """Early vs late triple fusion: H+W+G, H+W-FT+G, LF-H+W+G, LF-H+W-FT+G."""
+    col_idxs = _column_indices(FUSION_COMPARE_LATEX)
+    label = f"tab:ddk_fusion_{LANG_LABEL[language]}"
+    title = LANG_LATEX[language]
+    ncol = len(col_idxs)
+    n_rows_per_clf = len(DUAL_METRIC_ORDER)
+    lines = [
+        f"% {title} — early vs late triple fusion",
+        LATEX_TABLE_BEGIN,
+        f"\\caption{{DDK triple fusion on {title}: early concatenation vs.\\ late fusion "
+        f"($\\mu \\pm \\sigma$; best per row in bold). "
+        f"\\emph{{Spk.}} F1 uses sens.\\ $\\geq 0.90$; \\emph{{Utt.}} uses threshold $0.5$.}}",
+        f"\\label{{{label}}}",
+        "\\centering",
+        LATEX_TABLE_FONT,
+        LATEX_RESIZE_BEGIN,
+        f"\\begin{{tabular}}{{|l|l|l|{'c|' * ncol}}}",
+        "\\hline",
+        "\\textbf{Clf.} & \\textbf{Lvl.} & \\textbf{Metr.} & "
+        + " & ".join(f"\\textbf{{{FUSION_COMPARE_LATEX[i]}}}" for i in range(ncol))
+        + " \\\\",
+        "\\hline",
+    ]
+    clf_short = {"Random Forest": "RF", "XGBoost": "XGB"}
+    for model_id, model_name in MODEL_ORDER:
+        clf_label = clf_short[model_name]
+        for row_idx, key in enumerate(DUAL_METRIC_ORDER):
+            level_tag, metr_tag, mean_col, std_col = DUAL_LEVEL_METRICS[key]
+            all_means, all_stds = _row_metric_cells(language, model_id, mean_col, std_col)
+            means = [all_means[i] for i in col_idxs]
+            stds = [all_stds[i] for i in col_idxs]
+            valid = [m for m in means if m is not None]
+            best = max(valid) if valid else float("-inf")
+            cells = [
+                _latex_cell(means[i], stds[i], means[i] is not None and means[i] >= best - 1e-9)
+                for i in range(ncol)
+            ]
+            if row_idx == 0:
+                prefix = f"\\multirow{{{n_rows_per_clf}}}{{*}}{{{clf_label}}} & {level_tag} & {metr_tag} & "
+            else:
+                prefix = f" & {level_tag} & {metr_tag} & "
+            lines.append(prefix + " & ".join(cells) + " \\\\")
+        lines.append("\\hline")
+    lines.extend(["\\end{tabular}}", LATEX_TABLE_END, ""])
+    return "\n".join(lines)
+
+
+def render_latex_fusion_compare() -> str:
+    parts = [
+        "% Auto-generated by build_ddk_f1_tables.py --fusion-compare",
+        "% Preamble: \\usepackage{multirow} \\usepackage{dblfloatfix}",
+        "",
+        r"Tables~\ref{tab:ddk_fusion_cz}--\ref{tab:ddk_fusion_co} compare \textbf{early} triple fusion "
+        r"(feature concatenation: H+W+G with frozen Whisper; H+W-FT+G with CE fine-tuned Whisper) "
+        r"against \textbf{late} fusion (LF-H+W+G, LF-H+W-FT+G; weighted modality posteriors, $\sum w=1$).",
+        "",
+    ]
+    for lang in LANG_ORDER:
+        parts.append(build_latex_fusion_compare_table(lang))
+    parts.extend(
+        [
+            r"Late fusion improves speaker-level F1 over early concatenation on German and Colombian Spanish; "
+            r"on Czech, LF-H+W-FT+G matches or slightly exceeds H+W+G. "
+            r"H+W-FT+G remains competitive when Whisper is CE-adapted on Bridge2AI read speech.",
+            "",
+        ]
+    )
+    return "\n".join(parts)
+
+
+def _summary_lang_header(ncol: int) -> list[str]:
+    parts: list[str] = []
+    for i, lang in enumerate(LANG_ORDER):
+        color = LANG_COLOR[lang]
+        sep = "c|" if i == len(LANG_ORDER) - 1 else "c||"
+        parts.append(
+            f"\\multicolumn{{{ncol}}}{{{sep}}}{{\\textbf{{\\color{{{color}}}{{{LANG_HEADER[lang]}}}}}}}"
+        )
+    return parts
+
+
+def _build_summary_table_rows(
+    metr_tag: str,
+    mean_col: str,
+    std_col: str,
+    col_specs: list[tuple[str, int]],
+) -> list[str]:
+    """Return RF, XGB, and AVG rows for one metric."""
+    ncol = len(col_specs)
+    per_clf_cells: list[list[str]] = []
+    per_clf_nums: list[list[tuple[Optional[float], Optional[float]]]] = []
+
+    for clf_id, _ in MODEL_ORDER:
+        row_cells: list[str] = []
+        nums: list[tuple[Optional[float], Optional[float]]] = []
+        for lang in LANG_ORDER:
+            means: list[Optional[float]] = []
+            stds: list[Optional[float]] = []
+            for _, col_idx in col_specs:
+                m_list, s_list = _row_metric_cells(lang, clf_id, mean_col, std_col)
+                means.append(m_list[col_idx])
+                stds.append(s_list[col_idx])
+            valid = [m for m in means if m is not None]
+            best = max(valid) if valid else float("-inf")
+            for m, s in zip(means, stds):
+                row_cells.append(
+                    _latex_summary_cell(m, s, m is not None and m >= best - 1e-9, lang)
+                )
+                nums.append((m, s))
+        per_clf_cells.append(row_cells)
+        per_clf_nums.append(nums)
+
+    avg_cells: list[str] = []
+    for lang_idx, lang in enumerate(LANG_ORDER):
+        col_avgs: list[tuple[float, float]] = []
+        for col_i in range(ncol):
+            nums_m: list[float] = []
+            nums_s: list[float] = []
+            for clf_nums in per_clf_nums:
+                m, s = clf_nums[lang_idx * ncol + col_i]
+                if m is not None and s is not None:
+                    nums_m.append(m)
+                    nums_s.append(s)
+            if nums_m:
+                col_avgs.append((sum(nums_m) / len(nums_m), sum(nums_s) / len(nums_s)))
+            else:
+                col_avgs.append((float("nan"), float("nan")))
+
+        valid_avgs = [m for m, _ in col_avgs if m == m]
+        best_avg = max(valid_avgs) if valid_avgs else float("-inf")
+        for avg_m, avg_s in col_avgs:
+            if avg_m != avg_m:
+                avg_cells.append("---")
+            else:
+                avg_cells.append(
+                    _latex_summary_cell(
+                        avg_m, avg_s, avg_m >= best_avg - 1e-9, lang, emph=True
+                    )
+                )
+
+    return [
+        f"RF  & {metr_tag}  & " + " & ".join(per_clf_cells[0]) + " \\\\",
+        f"XGB & {metr_tag}  & " + " & ".join(per_clf_cells[1]) + " \\\\",
+        f"\\emph{{AVG}} & \\emph{{{metr_tag}}} & " + " & ".join(avg_cells) + " \\\\",
+    ]
+
+
+def _render_summary_multilang_table(
+    label: str,
+    caption: str,
+    col_specs: list[tuple[str, int]],
+    col_headers: list[str] | None = None,
+    resize: bool = True,
+) -> str:
+    nlang = len(LANG_ORDER)
+    ncol_per_lang = len(col_specs)
+    total_cols = nlang * ncol_per_lang
+    col_labels = col_headers or [name for name, _ in col_specs]
+
+    lines = [
+        f"% Summary: {label}",
+        LATEX_TABLE_BEGIN,
+        f"\\caption{{{caption}}}",
+        f"\\label{{tab:{label}}}",
+        "\\centering",
+        LATEX_TABLE_FONT,
+    ]
+    if resize:
+        lines.append(LATEX_RESIZE_BEGIN)
+
+    tab_cols = "|l|l|" + "c|" * total_cols
+    lines.append(f"\\begin{{tabular}}{{{tab_cols}}}")
+
+    # Header row 1: language groups
+    cline_end = 2 + total_cols
+    lines.append(f"\\cline{{3-{cline_end}}}")
+    lang_hdr = " & ".join(_summary_lang_header(ncol_per_lang))
+    lines.append(f"\\multicolumn{{2}}{{c|}}{{}} & {lang_hdr} \\\\")
+
+    lines.append("\\hline")
+    col_hdr = " & ".join(col_labels * nlang)
+    lines.append(f"\\textbf{{Clf.}} & \\textbf{{Metr.}} & {col_hdr} \\\\")
+    lines.append("\\hline")
+
+    metric_lines: list[str] = []
+    for i, (metr_tag, mean_col, std_col) in enumerate(SUMMARY_METRIC_ROWS):
+        if i > 0:
+            metric_lines.append("\\hline")
+        metric_lines.extend(_build_summary_table_rows(metr_tag, mean_col, std_col, col_specs))
+
+    lines.extend(metric_lines)
+    lines.append("\\hline")
+    if resize:
+        lines.extend(["\\end{tabular}}", LATEX_TABLE_END, ""])
+    else:
+        lines.extend(["\\end{tabular}", LATEX_TABLE_END, ""])
+    return "\n".join(lines)
+
+
+def render_latex_summary_tables() -> str:
+    cap_single = (
+        "Performance on DDK with individual features families. Results are reported as "
+        "($\\mu \\pm \\sigma$; best in bold). {\\em AVG}: average across classifiers."
+    )
+    cap_hw = (
+        "Performance on DDK using HuBERT/Whisper embeddings and their concatenation with "
+        "glottal features. Results are reported as ($\\mu \\pm \\sigma$; best in bold). "
+        "{\\em AVG}: average across classifiers."
+    )
+    cap_fusion = (
+        "Performance on DDK obtained with early- and late-fusion strategies for combining "
+        "classifier outputs. Results are reported as ($\\mu \\pm \\sigma$; best in bold). "
+        "{\\em AVG}: average across classifiers."
+    )
+    cap_wft = (
+        "Performance on DDK with Whisper fine-tuning. Results are reported as "
+        "($\\mu \\pm \\sigma$; best in bold). {\\em AVG} average across classifiers."
+    )
+
+    parts = [
+        "% Auto-generated by build_ddk_f1_tables.py --summary-tables",
+        f"% Utterance-level metrics; {DECIMAL_PLACES} decimal places.",
+        "",
+        _render_summary_multilang_table("ddk_single_all", cap_single, SUMMARY_SINGLE_COLS),
+        _render_summary_multilang_table("ddk_hw_hg_wg", cap_hw, SUMMARY_HW_G_COLS),
+    ]
+
+    # Early vs late fusion table (custom column headers per language)
+    nlang = len(LANG_ORDER)
+    fusion_lines = [
+        "% Summary: early vs late triple fusion",
+        LATEX_TABLE_BEGIN,
+        f"\\caption{{{cap_fusion}}}",
+        "\\label{tab:ddk_early_late_fusion}",
+        "\\centering",
+        LATEX_TABLE_FONT,
+        "\\begin{tabular}{|l|l|c|c||c|c||c|c|}",
+        "\\cline{3-8}",
+        "\\multicolumn{2}{c|}{} & "
+        + " & ".join(_summary_lang_header(2))
+        + " \\\\",
+        "\\multicolumn{2}{c|}{} & "
+        + " & ".join(
+            h
+            for _ in LANG_ORDER
+            for h in ("\\textbf{early}", "\\textbf{late}")
+        )
+        + " \\\\",
+        "\\hline",
+        "\\textbf{Clf.} & \\textbf{Metr.} & "
+        + " & ".join(
+            f"\\textbf{{{name}}}"
+            for _ in LANG_ORDER
+            for name in ("H+W+G", "LF-H+W+G")
+        )
+        + " \\\\",
+        "\\hline",
+    ]
+    for i, (metr_tag, mean_col, std_col) in enumerate(SUMMARY_METRIC_ROWS):
+        if i > 0:
+            fusion_lines.append("\\hline")
+        fusion_lines.extend(
+            _build_summary_table_rows(metr_tag, mean_col, std_col, SUMMARY_FUSION_COLS)
+        )
+    fusion_lines.extend(["\\hline", "\\end{tabular}", LATEX_TABLE_END, ""])
+    parts.append("\n".join(fusion_lines))
+
+    parts.append(
+        _render_summary_multilang_table(
+            "ddk_W_tuned",
+            cap_wft,
+            SUMMARY_WHISPER_FT_COLS,
+            col_headers=["W", "W-CE", "W-CTC"],
+        )
+    )
+    return "\n".join(parts)
+
+
+def render_latex(metric: str, dual: bool = False, fusion_compare: bool = False) -> str:
+    if fusion_compare:
+        return render_latex_fusion_compare()
     parts = [
         "% Auto-generated by build_ddk_f1_tables.py — paste into Experiments and Results",
         "% Wide tables use table* + \\textwidth for IEEE two-column layout.",
@@ -431,7 +766,7 @@ def render_latex(metric: str, dual: bool = False) -> str:
             parts.append(build_latex_table(lang, metric))
     parts.extend(
         [
-            r"Glottal-only performance is competitive on German (RF Utt.\ F1: 0.752) but weak on Czech. "
+            r"Glottal-only performance is competitive on German (RF Utt.\ F1: 0.75) but weak on Czech. "
             r"Fusion with SSL embeddings generally outperforms G alone; the best configuration remains language- and evaluation-level dependent. "
             r"Columns marked `---` for W-FT or H+W-FT+G indicate incomplete local result snapshots; run "
             r"\texttt{scripts/pull\_cluster\_classification\_results.sh} for full Acc/AUC.",
@@ -464,9 +799,19 @@ def main() -> None:
         action="store_true",
         help="LaTeX tables with Spk./Utt. rows (use with --write-latex)",
     )
+    parser.add_argument(
+        "--fusion-compare",
+        action="store_true",
+        help="Write classification_results/ddk_fusion_compare.tex (H+W+G vs LF columns only)",
+    )
+    parser.add_argument(
+        "--summary-tables",
+        action="store_true",
+        help="Write classification_results/ddk_paper_summary_tables.tex",
+    )
     args = parser.parse_args()
 
-    if not args.write_md and not args.write_latex:
+    if not args.write_md and not args.write_latex and not args.summary_tables:
         text = render_markdown(args.metric, dual=args.dual_level)
         print(text)
     if args.write_md:
@@ -474,8 +819,17 @@ def main() -> None:
         out.write_text(render_markdown(args.metric, dual=args.dual_level), encoding="utf-8")
         print(f"Wrote {out}", flush=True)
     if args.write_latex:
-        out = RESULTS_ROOT / "ddk_paper_snippets.tex"
-        out.write_text(render_latex(args.metric, dual=args.dual_level), encoding="utf-8")
+        if args.fusion_compare:
+            out = RESULTS_ROOT / "ddk_fusion_compare.tex"
+            out.write_text(render_latex(args.metric, dual=args.dual_level, fusion_compare=True), encoding="utf-8")
+            print(f"Wrote {out}", flush=True)
+        else:
+            out = RESULTS_ROOT / "ddk_paper_snippets.tex"
+            out.write_text(render_latex(args.metric, dual=args.dual_level), encoding="utf-8")
+            print(f"Wrote {out}", flush=True)
+    if args.summary_tables:
+        out = RESULTS_ROOT / "ddk_paper_summary_tables.tex"
+        out.write_text(render_latex_summary_tables(), encoding="utf-8")
         print(f"Wrote {out}", flush=True)
 
 

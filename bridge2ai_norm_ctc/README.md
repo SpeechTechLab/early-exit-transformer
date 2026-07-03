@@ -25,16 +25,34 @@ Use `--copy` if you need real files for `tar`/`rsync` to the cluster (symlinks b
 
 The cluster usually has **mels** but not the full **wav** trees. If `prepare_bridge2ai_norm_ctc_data.py` reports thousands of missing wavs and only ~900 train utts, copy wavs from your Mac first.
 
-**On Mac** (repo root, wavs under `bridge2ai_adult_wav_v2/` and `bridge2ai_pediatric_wav_v2/`):
+**On Mac** (must run from repo root — paths in the list are relative):
 
 ```bash
 cd /Users/ipatsoura/early-exit-transformer
-python3 export_norm_ctc_wav_paths.py   # writes bridge2ai_norm_ctc/manifests/norm_ctc_wav_paths.txt
+
+# Test SSH first (fix ssh-add if this fails)
+ssh -J ipatsoura@jumpsso.fbk.eu stek@digis-rf4421.fbk.eu echo ok
+
+# Recommended helper (~8.8 GB, only NORM-required wavs)
+bash scripts/transfer_norm_ctc_wavs_to_cluster.sh
+
+# Or transfer both full wav trees (~18 GB, simpler)
+bash scripts/transfer_norm_ctc_wavs_to_cluster.sh --full-dirs
+```
+
+Manual equivalent:
+
+```bash
+cd /Users/ipatsoura/early-exit-transformer
+python3 export_norm_ctc_wav_paths.py
 
 COPYFILE_DISABLE=1 tar czf - -T bridge2ai_norm_ctc/manifests/norm_ctc_wav_paths.txt \
   | ssh -J ipatsoura@jumpsso.fbk.eu stek@digis-rf4421.fbk.eu \
     'docker exec -i ee-ipatsoura-stek-4 tar -xzf - -C /stek/patsoura/early-exit-transformer'
 ```
+
+If tar prints `Cannot stat` for many files, you are **not** in `early-exit-transformer` (you ran from `~`).
+If SSH prints `Permission denied (publickey)`, run `ssh-add ~/.ssh/id_rsa` and retry.
 
 Expect **~32k wav files** (~several GB). After transfer, on the cluster:
 
