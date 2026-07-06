@@ -11,14 +11,18 @@ export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-0}"
 
 CE_CKPT="${CE_CKPT:-whisper_runs/bridge2ai_read_clean_short_en_ft_v2/checkpoint-150}"
 CTC_CKPT="${CTC_CKPT:-whisper_ctc_runs/bridge2ai_norm_partial_unfreeze/whisper_ctc_partial_unfreeze.pth}"
+BASELINE="${BASELINE:-1}"
 
-python3 scripts/run_matched_whisper_asr_eval.py \
-  --ce-checkpoint "$CE_CKPT" \
-  --ctc-checkpoint "$CTC_CKPT" \
-  --slam-llm-root "$SLAM_LLM_ROOT"
+ARGS=(--ce-checkpoint "$CE_CKPT" --ctc-checkpoint "$CTC_CKPT" --slam-llm-root "$SLAM_LLM_ROOT")
+if [[ "$BASELINE" == "1" ]]; then
+  ARGS+=(--baseline)
+fi
+
+python3 scripts/run_matched_whisper_asr_eval.py "${ARGS[@]}"
 
 echo ""
 echo "Results:"
+echo "  classification_results/whisper_en_asr_test/baseline_matched_test_ref_hyp.tsv"
 echo "  classification_results/whisper_en_asr_test/ce_matched_test_ref_hyp.tsv"
 echo "  classification_results/whisper_en_asr_test/ctc_matched_test_ref_hyp.tsv"
 echo "  classification_results/whisper_en_asr_test/matched_asr_comparison.json"

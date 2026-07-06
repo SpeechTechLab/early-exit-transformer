@@ -1,21 +1,19 @@
 #!/usr/bin/env python3
 """Fair matched ASR eval: CE and CTC Whisper on the same English test set.
 
-Uses clean_short_en/read_test.txt (239 utts) for both models.
+Uses clean_short_en/read_test.txt (239 utts) for all models.
 
 Outputs (under classification_results/whisper_en_asr_test/):
-  clean_short_en_test.jsonl     — wav + reference for both decoders
-  ce_matched_test_ref_hyp.tsv   — CE hypotheses
-  ctc_matched_test_ref_hyp.tsv  — CTC hypotheses
-  matched_asr_comparison.json   — WER on the same 239 references
+  clean_short_en_test.jsonl          — wav + reference
+  baseline_matched_test_ref_hyp.tsv  — non-fine-tuned Whisper (optional)
+  ce_matched_test_ref_hyp.tsv        — CE fine-tuned hypotheses
+  ctc_matched_test_ref_hyp.tsv       — CTC fine-tuned hypotheses
+  matched_asr_comparison.json        — WER summary
 
-Example (cluster, both checkpoints present):
-  export SLAM_LLM_ROOT=/stek/patsoura/SLAM-LLM-main
-  python3 scripts/run_matched_whisper_asr_eval.py \\
+Example (cluster):
+  python3 scripts/run_matched_whisper_asr_eval.py --baseline \\
     --ce-checkpoint whisper_runs/bridge2ai_read_clean_short_en_ft_v2/checkpoint-150 \\
     --ctc-checkpoint whisper_ctc_runs/bridge2ai_norm_partial_unfreeze/whisper_ctc_partial_unfreeze.pth
-
-CE only or CTC only is fine; omit the other --*-checkpoint flag.
 """
 
 from __future__ import annotations
@@ -141,27 +139,34 @@ def compute_wer(refs: list[str], hyps: list[str]) -> float:
     return float(wer.compute(predictions=hyps, references=refs))
 
 
-def run_ce_decode(
+def run_seq2seq_decode(
     records: list[dict],
-    checkpoint: Path,
     batch_size: int,
     *,
     base_model_id: str = DEFAULT_MODEL_ID,
+    checkpoint: Path | None = None,
+    progress_label: str = "decode",
 ) -> list[dict]:
+    """Seq2seq Whisper decode (baseline or CE-finetuned checkpoint)."""
     import torch
     import torchaudio
     from transformers import WhisperForConditionalGeneration, WhisperProcessor
 
-    ckpt = checkpoint.resolve()
-    if not ckpt.is_dir():
-        raise SystemExit(f"CE checkpoint not found: {ckpt}")
-
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    proc_src = _whisper_processor_source(ckpt, base_model_id)
-    if proc_src != str(ckpt):
-        print(f"[info] CE processor from {proc_src} (checkpoint has no tokenizer)", flush=True)
-    processor = WhisperProcessor.from_pretrained(proc_src)
-    model = WhisperForConditionalGeneration.from_pretrained(str(ckpt)).to(device).eval()
+    if checkpoint is None:
+        print(f"[info] loading base model {base_model_id}", flush=True)
+        processor = WhisperProcessor.from_pretrained(base_model_id)
+        model = WhisperForConditionalGeneration.from_pretrained(base_model_id).to(device).eval()
+    else:
+        ckpt = checkpoint.resolve()
+        if not ckpt.is_dir():
+            raise SystemExit(f"Checkpoint not found: {ckpt}")
+        proc_src = _whisper_processor_source(ckpt, base_model_id)
+        if proc_src != str(ckpt):
+            print(f"[info] processor from {proc_src} (checkpoint has no tokenizer)", flush=True)
+        processor = WhisperProcessor.from_pretrained(proc_src)
+        model = WhisperForConditionalGeneration.from_pretrained(str(ckpt)).to(device).eval()
+
     try:
         model.generation_config.forced_decoder_ids = processor.get_decoder_prompt_ids(
             language="en", task="transcribe"
@@ -196,8 +201,24 @@ def run_ce_decode(
         hyps = processor.tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
         for r, hyp in zip(batch, hyps):
             out.append({**r, "hypothesis": normalize_text(hyp)})
-        print(f"  CE {min(i + batch_size, len(records))}/{len(records)}", flush=True)
+        print(f"  {progress_label} {min(i + batch_size, len(records))}/{len(records)}", flush=True)
     return out
+
+
+def run_ce_decode(
+    records: list[dict],
+    checkpoint: Path,
+    batch_size: int,
+    *,
+    base_model_id: str = DEFAULT_MODEL_ID,
+) -> list[dict]:
+    return run_seq2seq_decode(
+        records,
+        batch_size,
+        base_model_id=base_model_id,
+        checkpoint=checkpoint,
+        progress_label="CE",
+    )
 
 
 def _setup_slam_llm(slam_root: Path) -> None:
@@ -292,6 +313,16 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--ce-checkpoint", type=Path, default=None)
     parser.add_argument("--ctc-checkpoint", type=Path, default=None)
+    parser.add_argument(
+        "--baseline",
+        action="store_true",
+        help="Also decode non-fine-tuned Whisper (--model-id, default openai/whisper-large-v3)",
+    )
+    parser.add_argument(
+        "--baseline-only",
+        action="store_true",
+        help="Decode baseline only (skip CE/CTC unless checkpoints passed explicitly)",
+    )
     parser.add_argument("--model-id", default=DEFAULT_MODEL_ID, help="Base Whisper id for processor fallback")
     parser.add_argument("--ce-batch-size", type=int, default=4)
     parser.add_argument("--ctc-batch-size", type=int, default=8)
@@ -317,12 +348,13 @@ def main() -> int:
 
     ce_ckpt = args.ce_checkpoint or DEFAULT_CE_CKPT
     ctc_ckpt = args.ctc_checkpoint or DEFAULT_CTC_CKPT
-    run_ce = args.ce_checkpoint is not None or ce_ckpt.is_dir()
-    run_ctc = args.ctc_checkpoint is not None or ctc_ckpt.is_file()
+    run_baseline = args.baseline or args.baseline_only
+    run_ce = (not args.baseline_only) and (args.ce_checkpoint is not None or ce_ckpt.is_dir())
+    run_ctc = (not args.baseline_only) and (args.ctc_checkpoint is not None or ctc_ckpt.is_file())
 
-    if not run_ce and not run_ctc:
+    if not run_baseline and not run_ce and not run_ctc:
         print(
-            "\nNo checkpoints found. Pass paths explicitly, e.g.:\n"
+            "\nNothing to decode. Use --baseline, --baseline-only, or pass checkpoints:\n"
             "  --ce-checkpoint whisper_runs/.../checkpoint-150\n"
             "  --ctc-checkpoint whisper_ctc_runs/.../whisper_ctc_partial_unfreeze.pth"
         )
@@ -333,6 +365,26 @@ def main() -> int:
         "n_utts": len(records),
         "jsonl": str(jsonl_path),
     }
+
+    if run_baseline:
+        print(f"\nBaseline decode: {args.model_id}", flush=True)
+        base_out = run_seq2seq_decode(
+            records,
+            args.ce_batch_size,
+            base_model_id=args.model_id,
+            checkpoint=None,
+            progress_label="baseline",
+        )
+        base_tsv = OUT_DIR / "baseline_matched_test_ref_hyp.tsv"
+        write_ref_hyp_tsv(base_out, base_tsv, "baseline")
+        base_wer = compute_wer([r["reference"] for r in base_out], [r["hypothesis"] for r in base_out])
+        comparison["baseline"] = {
+            "model_id": args.model_id,
+            "wer": base_wer,
+            "wer_percent": round(100 * base_wer, 2),
+            "output_tsv": str(base_tsv),
+        }
+        print(f"Baseline test WER: {comparison['baseline']['wer_percent']}%")
 
     if run_ce:
         print(f"\nCE decode: {ce_ckpt}", flush=True)
